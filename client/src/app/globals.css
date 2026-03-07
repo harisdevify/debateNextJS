@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+
+/* ============================= */
+/* DESIGN TOKENS                 */
+/* ============================= */
+:root {
+  --font-sans: 'Maven Pro', system-ui, sans-serif;
+
+  /* Colors */
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --muted-foreground: #aaaaaa;
+
+  --primary: #00bfa6;
+  --primary-hover: #009e8a;
+  --primary-dark: #00a693;
+
+  --surface: rgba(10, 24, 22, 0.95);
+  --surface-light: rgba(40, 40, 40, 0.85);
+  --border-color: rgba(0, 191, 166, 0.25);
+  --border-subtle: #333333;
+
+  --header-height: 64px;
+  --container-max: 1200px;
+
+  /* Shadows */
+  --shadow-primary: 0 6px 15px rgba(0, 191, 166, 0.35);
+  --shadow-primary-hover: 0 8px 20px rgba(0, 191, 166, 0.5);
+}
+
+/* ============================= */
+/* TAILWIND v4 THEME             */
+/* ============================= */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-surface: var(--surface);
+  --color-border: var(--border-color);
+  --font-sans: var(--font-sans);
+}
+
+/* ============================= */
+/* BASE                          */
+/* ============================= */
+
+html,
+body,
+#root {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
+  line-height: 1.6;
+}
+
+/* ============================= */
+/* UTILITIES                     */
+/* ============================= */
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 191, 166, 0.5) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 191, 166, 0.5);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================= */
+/* ANIMATIONS                    */
+/* ============================= */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeUp {
+  animation: fadeUp 1s ease-out;
+}
+
+.animate-messageSlide {
+  animation: messageSlide 0.3s ease;
+}
+
+/* for chat animation */
+@keyframes bubIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.93);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes badgePop {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.78);
+  }
+}
+.badge-anim {
+  animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.live-dot {
+  animation: livePulse 2s infinite;
+}
