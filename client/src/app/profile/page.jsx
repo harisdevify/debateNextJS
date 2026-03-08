@@ -51,12 +51,6 @@ const inputClass = `w-full px-4 py-3 rounded-xl bg-white/[0.05] text-white borde
 export default function ProfilePage() {
   const { isAuthenticated, getUser, saveUser } = useAuth();
   const router = useRouter();
-
-  if (!isAuthenticated()) {
-    router.push('/login');
-    return null;
-  }
-
   const storedUser = getUser();
   const [form, setForm] = useState({
     fullname: storedUser?.fullname || '',

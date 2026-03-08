@@ -37,7 +37,7 @@ const stats = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden">
+    <div className="flex flex-col min-h-screen overflow-x-hidden max-container">
       {/* ── HERO ── */}
       <section className="relative flex items-center justify-center text-center px-5 min-h-[calc(100vh-56px)]">
         {/* Background layers */}

@@ -60,7 +60,7 @@ body,
 /* ============================= */
 /* UTILITIES                     */
 /* ============================= */
-.container {
+.max-container {
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 0 24px;
@@ -72,7 +72,7 @@ body,
   scrollbar-color: rgba(0, 191, 166, 0.5) transparent;
 }
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+  width: 3px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: rgba(0, 191, 166, 0.5);

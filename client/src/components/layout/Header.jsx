@@ -1,20 +1,20 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '../../hooks/useAuth';
 
 export default function Header() {
-  const { isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
-  const authed = isAuthenticated();
+  const [, startTransition] = useTransition();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close sidebar on route change
   useEffect(() => {
-    setSidebarOpen(false);
+    startTransition(() => {
+      setSidebarOpen(false);
+    });
   }, [pathname]);
 
   // Lock body scroll when sidebar is open
@@ -47,21 +47,16 @@ export default function Header() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/rules', label: 'Rules' },
-    ...(authed
-      ? [
-          { href: '/profile', label: 'Profile' },
-          { href: '/video', label: 'Debate' },
-        ]
-      : [
-          { href: '/register', label: 'Sign Up' },
-          { href: '/login', label: 'Login' },
-        ]),
+    { href: '/profile', label: 'Profile' },
+    { href: '/video', label: 'Debate' },
+    { href: '/register', label: 'Sign Up' },
+    { href: '/login', label: 'Login' },
   ];
 
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-[rgba(0,191,166,0.25)] transition-all duration-300 bg-[rgba(10,24,22,0.9)] backdrop-blur-[14px] py-2">
-        <div className="container flex items-center justify-between">
+        <div className="max-container flex items-center justify-between">
           {/* Logo */}
           <Link href="/">
             <h1 className="font-bold text-primary text-xl">Debate</h1>
@@ -74,15 +69,14 @@ export default function Header() {
                 {label}
               </Link>
             ))}
-            {authed && (
-              <a
-                href="#"
-                onClick={handleLogout}
-                className="relative px-2.5 py-1.5 text-white transition-all duration-300 hover:text-primary hover:-translate-y-px"
-              >
-                Logout
-              </a>
-            )}
+
+            <a
+              href="#"
+              onClick={handleLogout}
+              className="relative px-2.5 py-1.5 text-white transition-all duration-300 hover:text-primary hover:-translate-y-px"
+            >
+              Logout
+            </a>
           </nav>
 
           {/* Mobile Hamburger */}
@@ -142,26 +136,24 @@ export default function Header() {
 
         {/* Bottom actions */}
         <div className="px-3 pb-6 pt-2 border-t border-[rgba(0,191,166,0.15)]">
-          {authed ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
                          bg-[rgba(255,60,60,0.1)] border border-[rgba(255,60,60,0.25)]
                          text-red-400 font-medium transition-all duration-200
                          hover:bg-[rgba(255,60,60,0.2)] hover:text-red-300"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
+          >
+            Logout
+          </button>
+          <Link
+            href="/login"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl
                          bg-primary text-[#111] font-bold transition-all duration-200
                          hover:bg-[#009e8a]"
-            >
-              Login
-            </Link>
-          )}
+          >
+            Login
+          </Link>
+
           <p className="text-center text-white/20 text-xs mt-4">
             © 2025 Islamic Debate Platform
           </p>
