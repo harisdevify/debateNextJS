@@ -13,10 +13,13 @@ if (!DB_HOST || !DB_USER || !DB_NAME) {
   throw new Error('Missing database configuration. Check your .env file.');
 }
 
-export const db = await mysql.createConnection({
+// A pool reconnects automatically; a single connection dies after idle timeout.
+export const db = mysql.createPool({
   host: DB_HOST,
   port: Number(DB_PORT),
   user: DB_USER,
   password: DB_PASSWORD,
   database: DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
 });

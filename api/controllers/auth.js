@@ -17,13 +17,19 @@ const cookieOptions = {
   sameSite: isProduction ? 'none' : 'lax',
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Never send the password hash to the client
+const PUBLIC_FIELDS = 'id, fullname, email, gender, education, country';
+
 export const register = async (req, res) => {
   try {
-    const { fullname, email, gender, education, country, password } = req.body;
+    // Express 5: req.body is undefined when no body is sent
+    const { fullname, email, gender, education, country, password } =
+      req.body ?? {};
 
-    // validation
     if (
-      !fullname ||
+      !fullname?.trim() ||
       !email ||
       !gender ||
       !education ||
@@ -33,7 +39,16 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required!' });
     }
 
-    // check if email already exists
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ message: 'Invalid email address!' });
+    }
+
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ message: 'Password must be at least 8 characters!' });
+    }
+
     const [data] = await db.query(
       'SELECT id FROM debate_users WHERE email = ?',
       [email]
@@ -43,13 +58,11 @@ export const register = async (req, res) => {
       return res.status(409).json({ message: 'Email already exists!' });
     }
 
-    // hash password
-    const salt = bcrypt.genSaltSync(10);
-    const hashPassword = bcrypt.hashSync(password, salt);
+    const hashPassword = await bcrypt.hash(password, 10);
 
     await db.query(
-      'INSERT INTO debate_users (fullname, email, gender, education, country, password) VALUES (?)',
-      [[fullname, email, gender, education, country, hashPassword]]
+      'INSERT INTO debate_users (fullname, email, gender, education, country, password) VALUES (?, ?, ?, ?, ?, ?)',
+      [fullname.trim(), email, gender, education, country, hashPassword]
     );
 
     return res.status(201).json({ message: 'Account created successfully!' });
@@ -62,45 +75,60 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body ?? {};
 
-    // validation
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: 'Email and password are required!' });
     }
 
-    // check user
     const [data] = await db.query(
-      'SELECT * FROM debate_users WHERE email = ?',
+      `SELECT ${PUBLIC_FIELDS}, password FROM debate_users WHERE email = ?`,
       [email]
     );
 
-    if (data.length === 0) {
-      return res.status(404).json({ message: 'Account not found!' });
+    // Same message for unknown email and wrong password,
+    // so nobody can find out which emails are registered.
+    const user = data[0];
+    const valid = user && (await bcrypt.compare(password, user.password));
+
+    if (!valid) {
+      return res.status(401).json({ message: 'Invalid email or password!' });
     }
 
-    // compare password
-    const checkPassword = bcrypt.compareSync(password, data[0].password);
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1d' });
 
-    if (!checkPassword) {
-      return res.status(401).json({ message: 'Wrong password!' });
-    }
-
-    const token = jwt.sign({ id: data[0].id }, JWT_SECRET, {
-      expiresIn: '1d',
-    });
-
-    // remove password before sending the user object back
-    const { password: _password, ...others } = data[0];
+    const { password: _password, ...publicUser } = user;
 
     return res
-      .cookie('accessToken', token, cookieOptions)
+      .cookie('accessToken', token, {
+        ...cookieOptions,
+        maxAge: 24 * 60 * 60 * 1000, // matches the 1d token
+      })
       .status(200)
-      .json(others);
+      .json(publicUser);
   } catch (error) {
     console.error('Login Error:', error);
+    return res.status(500).json({ message: 'Something went wrong!' });
+  }
+};
+
+// Current user from the httpOnly cookie (set by verifyToken)
+export const me = async (req, res) => {
+  try {
+    const [data] = await db.query(
+      `SELECT ${PUBLIC_FIELDS} FROM debate_users WHERE id = ?`,
+      [req.userId]
+    );
+
+    if (!data.length) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    return res.status(200).json(data[0]);
+  } catch (error) {
+    console.error('Me Error:', error);
     return res.status(500).json({ message: 'Something went wrong!' });
   }
 };

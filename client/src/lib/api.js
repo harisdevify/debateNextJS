@@ -10,14 +10,18 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const data = error.response?.data;
-    // API errors are { message: '...' } but handle plain strings too
-    const message =
-      (typeof data === 'string' ? data : data?.message) ||
-      error.message ||
-      'Something went wrong';
+    // Pass `{ silent: true }` in the request config to skip the toast
+    // (used for the /auth/me check on page load).
+    if (!error.config?.silent) {
+      const data = error.response?.data;
+      // API errors are { message: '...' } but handle plain strings too
+      const message =
+        (typeof data === 'string' ? data : data?.message) ||
+        error.message ||
+        'Something went wrong';
 
-    toast.error(message);
+      toast.error(message);
+    }
 
     return Promise.reject(error);
   }

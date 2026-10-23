@@ -1,5 +1,6 @@
 import Footer from '@/components/layout/Footer';
 import Header from '@/components/layout/Header';
+import { AuthProvider } from '@/context/AuthContext';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
@@ -26,9 +27,11 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-thin flex min-h-screen flex-col`}
       >
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer developer="M Haris" />
+        <AuthProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer developer="M Haris" />
+        </AuthProvider>
         <Toaster
           richColors
           position="top-right"

@@ -14,8 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useWebRTC } from '../../hooks/useWebRTC';
 
-const PLACEHOLDER =
-  "url('https://m.gettywallpapers.com/wp-content/uploads/2023/06/Dark-Black-Profile-Picture.jpg') no-repeat center center / cover";
+const PLACEHOLDER = 'var(--background)';
 
 const DEMO_MSGS = [
   { id: 1, sender: 'other', text: 'Hey! Can you hear me okay? 🎧' },
@@ -102,10 +101,9 @@ function ChatInputRow({ onSend }) {
 }
 
 /* ── Main Page ─────────────────────────────── */
-export default function VideoPage() {
+function DebateRoom() {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
-  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const { toggleMic, toggleCamera } = useWebRTC(localRef, remoteRef);
 
@@ -346,4 +344,18 @@ export default function VideoPage() {
       </div>
     </>
   );
+}
+
+/* ── Auth gate ─────────────────────────────── */
+// DebateRoom (camera/mic/socket hooks) only mounts once the user is confirmed.
+export default function VideoPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) router.replace('/login');
+  }, [loading, user, router]);
+
+  if (loading || !user) return null;
+  return <DebateRoom />;
 }

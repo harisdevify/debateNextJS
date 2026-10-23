@@ -159,8 +159,8 @@ export default function SignUpPage() {
             {/* decorative card */}
             <div className="p-5 rounded-2xl border border-[rgba(0,191,166,0.15)] bg-[rgba(0,191,166,0.04)]">
               <p className="text-white/30 text-xs leading-relaxed italic">
-                "And of His signs is the creation of the heavens and earth and
-                the diversity of your languages and your colors."
+                &ldquo;And of His signs is the creation of the heavens and earth and
+                the diversity of your languages and your colors.&rdquo;
               </p>
               <p className="text-primary/50 text-xs mt-2 font-semibold">
                 — Quran 30:22
