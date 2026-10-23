@@ -77,7 +77,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="relative z-10 max-w-[860px] mx-auto flex flex-col items-center gap-6 py-24">
+        <div className="relative z-10 max-w-[860px] mx-auto flex flex-col items-center gap-6 py-24 stagger">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,191,166,0.3)] bg-[rgba(0,191,166,0.08)] text-primary text-sm font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -105,7 +105,7 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-3 justify-center mt-2">
             <Link
               href="/video"
-              className="group flex items-center gap-2 px-7 py-3.5 text-[1rem] font-bold rounded-xl
+              className="pressable group flex items-center gap-2 px-7 py-3.5 text-[1rem] font-bold rounded-xl
                          bg-primary text-[#0a0a0a]
                          shadow-[0_0_0_0_rgba(0,191,166,0.5)]
                          transition-all duration-300
@@ -130,7 +130,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats Row */}
-          <div className="flex flex-wrap justify-center gap-8 mt-10 pt-10 border-t border-white/[0.07] w-full">
+          <div className="flex flex-wrap justify-center gap-8 mt-10 pt-10 border-t border-white/[0.07] w-full stagger">
             {stats.map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5 text-primary">
@@ -181,7 +181,7 @@ export default function HomePage() {
           </div>
 
           {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger">
             {features.map(({ icon: Icon, title, desc, stat }) => (
               <div
                 key={title}

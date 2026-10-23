@@ -1,0 +1,12 @@
+{
+  "name": "debate-nextjs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix api install && npm --prefix client install",
+    "dev": "concurrently -n API,CLIENT -c cyan,magenta \"npm --prefix api run dev\" \"npm --prefix client run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

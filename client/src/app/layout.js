@@ -1,3 +1,4 @@
+import Footer from '@/components/layout/Footer';
 import Header from '@/components/layout/Header';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
@@ -23,12 +24,23 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-thin`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-thin flex min-h-screen flex-col`}
       >
         <Header />
-        {children}
-        {/* <Footer developer="M Haris" /> */}
-        <Toaster richColors position="top-right" />
+        <main className="flex-1">{children}</main>
+        <Footer developer="M Haris" />
+        <Toaster
+          richColors
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: 'rgba(13, 22, 20, 0.92)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(12px)',
+              color: '#f5f7f6',
+            },
+          }}
+        />
       </body>
     </html>
   );

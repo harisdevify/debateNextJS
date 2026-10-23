@@ -52,7 +52,7 @@ export default function LoginPage() {
     }
   };
 
-  const inputClass = `w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.05] text-white border border-white/[0.08]
+  const inputClass = `input w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.05] text-white border border-white/[0.08]
      placeholder:text-white/20 focus:outline-none focus:border-primary/60 focus:bg-white/[0.07]
      transition-all duration-200`;
 
@@ -86,8 +86,9 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 w-full max-w-[860px] grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+          {/* form panel enters second, slightly later */}
           {/* ── LEFT PANEL ── */}
-          <div className="hidden lg:flex flex-col gap-8 pr-6">
+          <div className="hidden lg:flex flex-col gap-8 pr-6 stagger">
             <div>
               <div
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 mb-5 rounded-full
@@ -139,7 +140,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── RIGHT PANEL — FORM ── */}
-          <div className="rounded-3xl border border-white/[0.08] bg-[rgba(10,24,22,0.85)] p-8 backdrop-blur-sm">
+          <div className="rounded-3xl border border-white/[0.08] bg-[rgba(10,24,22,0.85)] p-8 backdrop-blur-sm fade-up d-2">
             <div className="mb-7">
               <h3 className="text-white font-black text-[1.5rem]">Login</h3>
               <p className="text-white/35 text-sm mt-1">

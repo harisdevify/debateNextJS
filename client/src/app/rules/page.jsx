@@ -95,7 +95,7 @@ export default function RulesPage() {
           </div>
 
           {/* Rules List */}
-          <ol className="flex flex-col gap-3">
+          <ol className="flex flex-col gap-3 stagger">
             {rules.map(({ icon: Icon, title, text }, index) => (
               <li
                 key={title}

@@ -1,0 +1,160 @@
+/* ============================================================
+   Apple-like Motion System for debateNextJS (client/)
+   Paste into: client/src/app/globals.css  (Tailwind v4 compatible)
+   Based on emilkowalski/skills principles:
+   - ease-out for ENTER, ease-in for EXIT
+   - transform + opacity only (GPU-friendly, no layout thrash)
+   - subtle springs for interactive elements
+   - durations: 150-250ms UI / 300-450ms page transitions
+   ============================================================ */
+
+@import 'tailwindcss';
+
+/* ---------- 1. Motion tokens (Tailwind v4 @theme) ---------- */
+@theme {
+  --ease-apple-out: cubic-bezier(0.22, 1, 0.36, 1); /* decelerate — ENTRIES */
+  --ease-apple-in: cubic-bezier(0.55, 0, 1, 0.45); /* accelerate — EXITS   */
+  --ease-apple-spring: cubic-bezier(
+    0.34,
+    1.56,
+    0.64,
+    1
+  ); /* overshoot — interactive */
+
+  --dur-fast: 150ms;
+  --dur-ui: 200ms;
+  --dur-slow: 350ms;
+
+  --animate-fade-up: fade-up var(--dur-slow) var(--ease-apple-out) both;
+  --animate-fade-in: fade-in var(--dur-ui) var(--ease-apple-out) both;
+  --animate-scale-in: scale-in var(--dur-ui) var(--ease-apple-spring) both;
+  --animate-press: press var(--dur-fast) var(--ease-apple-out) both;
+}
+
+/* ---------- 2. Keyframes (transform + opacity ONLY) ---------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes press {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0.97);
+  }
+}
+
+/* ---------- 3. Global polish ---------- */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Apple-style: respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------- 4. Reusable utility classes ---------- */
+
+/* Buttons: spring press + fast release */
+.btn-apple {
+  transition:
+    transform var(--dur-fast) var(--ease-apple-out),
+    box-shadow var(--dur-ui) var(--ease-apple-out),
+    background-color var(--dur-ui) var(--ease-apple-out);
+  will-change: transform;
+}
+.btn-apple:active {
+  transform: scale(0.97);
+}
+
+/* Cards: soft layered shadow, NOT solid borders */
+.card-apple {
+  border: 1px solid rgb(0 0 0 / 0.06);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 24px rgb(0 0 0 / 0.06);
+  transition:
+    transform var(--dur-ui) var(--ease-apple-out),
+    box-shadow var(--dur-ui) var(--ease-apple-out);
+}
+.card-apple:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.05),
+    0 12px 32px rgb(0 0 0 / 0.1);
+}
+
+/* Staggered list entrance — use: <ul class="stagger"> */
+.stagger > * {
+  animation: fade-up var(--dur-slow) var(--ease-apple-out) both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.stagger > *:nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+
+/* Page-level entrance */
+.page-enter {
+  animation: fade-up 450ms var(--ease-apple-out) both;
+}
+
+/* Inputs: focus glow instead of harsh border swap */
+.input-apple {
+  transition:
+    box-shadow var(--dur-ui) var(--ease-apple-out),
+    border-color var(--dur-ui) var(--ease-apple-out);
+}
+.input-apple:focus {
+  outline: none;
+  border-color: rgb(59 130 246 / 0.5);
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.15);
+}
