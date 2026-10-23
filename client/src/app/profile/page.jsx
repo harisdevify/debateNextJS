@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -48,9 +48,8 @@ const inputClass = `w-full px-4 py-3 rounded-xl bg-white/[0.05] text-white borde
    placeholder:text-white/25 focus:outline-none focus:border-primary/60
    focus:bg-white/[0.07] transition-all duration-200`;
 
-export default function ProfilePage() {
-  const { isAuthenticated, getUser, saveUser } = useAuth();
-  const router = useRouter();
+function ProfileContent() {
+  const { getUser, saveUser } = useAuth();
   const storedUser = getUser();
   const [form, setForm] = useState({
     fullname: storedUser?.fullname || '',
@@ -301,7 +300,7 @@ export default function ProfilePage() {
                 Edit Profile
                 {!editing && (
                   <span className="text-white/25 text-xs font-normal ml-1">
-                    — click "Edit Profile" to unlock
+                    — click &ldquo;Edit Profile&rdquo; to unlock
                   </span>
                 )}
               </h2>
@@ -392,4 +391,18 @@ export default function ProfilePage() {
       </section>
     </div>
   );
+}
+
+/* ── Auth gate ─────────────────────────────── */
+export default function ProfilePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) router.replace('/login');
+  }, [loading, user, router]);
+
+  if (loading || !user) return null;
+  // ProfileContent seeds its form from the user on first render
+  return <ProfileContent key={user.id} />;
 }

@@ -1,16 +1,16 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 export default function Header() {
   const pathname = usePathname();
   const [, startTransition] = useTransition();
-  const { logout } = useAuth();
+  const router = useRouter();
+  const { user, logout } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,15 +31,10 @@ export default function Header() {
 
   const handleLogout = async (e) => {
     e.preventDefault();
-    try {
-      await api.post('/auth/logout');
-    } catch {
-      // even if the server call fails, log out locally
-    }
-    logout();
+    await logout(); // clears the cookie on the server, then the local state
     toast.success('You have been logged out.');
     setSidebarOpen(false);
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   const navLinkClass = (href) =>
@@ -57,10 +52,15 @@ export default function Header() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/rules', label: 'Rules' },
-    { href: '/profile', label: 'Profile' },
-    { href: '/video', label: 'Debate' },
-    { href: '/register', label: 'Sign Up' },
-    { href: '/login', label: 'Login' },
+    ...(user
+      ? [
+          { href: '/profile', label: 'Profile' },
+          { href: '/video', label: 'Debate' },
+        ]
+      : [
+          { href: '/register', label: 'Sign Up' },
+          { href: '/login', label: 'Login' },
+        ]),
   ];
 
   return (
@@ -91,13 +91,15 @@ export default function Header() {
               </Link>
             ))}
 
-            <a
-              href="#"
-              onClick={handleLogout}
-              className="pressable ml-1 rounded-full border border-white/10 px-4 py-1.5 text-[0.9rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
-            >
-              Logout
-            </a>
+            {user && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="pressable ml-1 rounded-full border border-white/10 px-4 py-1.5 text-[0.9rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
+              >
+                Logout
+              </button>
+            )}
           </nav>
 
           {/* Mobile Hamburger */}
@@ -153,18 +155,21 @@ export default function Header() {
 
         {/* Bottom actions */}
         <div className="border-t border-white/[0.06] px-3 pt-3 pb-6">
-          <button
-            onClick={handleLogout}
-            className="pressable mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 font-medium text-red-400 transition-colors hover:bg-red-400/20 hover:text-red-300"
-          >
-            Logout
-          </button>
-          <Link
-            href="/login"
-            className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-[#06231e] transition-colors hover:bg-primary-hover"
-          >
-            Login
-          </Link>
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="pressable mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 font-medium text-red-400 transition-colors hover:bg-red-400/20 hover:text-red-300"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-[#06231e] transition-colors hover:bg-primary-hover"
+            >
+              Login
+            </Link>
+          )}
 
           <p className="mt-4 text-center text-xs text-white/25">
             © 2025 Islamic Debate Platform

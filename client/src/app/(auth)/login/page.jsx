@@ -1,6 +1,5 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
 import {
   ArrowRight,
   Eye,
@@ -27,7 +26,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { saveUser } = useAuth();
+  const { login } = useAuth();
 
   const handleChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -37,16 +36,11 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       setLoading(true);
-      const res = await api.post('/auth/login', form);
-      if (res.status === 200) {
-        // keep the user in localStorage so profile & guards work
-        saveUser(res.data);
-        toast.success('Login successfully!');
-        router.push('/profile');
-      }
-    } catch (error) {
+      await login(form);
+      toast.success('Login successfully!');
+      router.push('/profile');
+    } catch {
       // the api interceptor already shows the error toast
-      console.error(error.response ?? error);
     } finally {
       setLoading(false);
     }
@@ -130,8 +124,8 @@ export default function LoginPage() {
             {/* Quote */}
             <div className="p-5 rounded-2xl border border-[rgba(0,191,166,0.15)] bg-[rgba(0,191,166,0.04)]">
               <p className="text-white/30 text-xs leading-relaxed italic">
-                "Invite to the way of your Lord with wisdom and good
-                instruction, and argue with them in a way that is best."
+                &ldquo;Invite to the way of your Lord with wisdom and good
+                instruction, and argue with them in a way that is best.&rdquo;
               </p>
               <p className="text-primary/50 text-xs mt-2 font-semibold">
                 — Quran 16:125
@@ -244,7 +238,7 @@ export default function LoginPage() {
                          border border-white/[0.08] bg-white/[0.03] text-white/60 text-sm font-medium
                          transition-all duration-200 hover:bg-white/[0.06] hover:text-white hover:border-white/[0.14]"
             >
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </Link>
 
             <p className="mt-4 text-center text-white/20 text-xs">
