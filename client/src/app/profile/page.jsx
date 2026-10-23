@@ -49,7 +49,7 @@ const inputClass = `w-full px-4 py-3 rounded-xl bg-white/[0.05] text-white borde
    focus:bg-white/[0.07] transition-all duration-200`;
 
 function ProfileContent() {
-  const { getUser, saveUser } = useAuth();
+  const { getUser, saveUser, updateProfile } = useAuth();
   const storedUser = getUser();
   const [form, setForm] = useState({
     fullname: storedUser?.fullname || '',
@@ -70,13 +70,13 @@ function ProfileContent() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       setAvatarSrc(ev.target.result);
-      saveUser({ ...storedUser, ...form, avatar: ev.target.result });
+      saveUser({ avatar: ev.target.result });
       toast.success('Profile picture updated!');
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const unchanged =
       form.fullname === storedUser?.fullname &&
@@ -88,9 +88,13 @@ function ProfileContent() {
       toast.error('Nothing to save.');
       return;
     }
-    saveUser({ ...storedUser, ...form });
-    toast.success('Profile updated!');
-    setEditing(false);
+    try {
+      await updateProfile(form);
+      toast.success('Profile updated!');
+      setEditing(false);
+    } catch {
+      // the api interceptor already shows the error toast
+    }
   };
 
   const avatarGrad = getAvatarColor(form.fullname);

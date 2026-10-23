@@ -133,6 +133,44 @@ export const me = async (req, res) => {
   }
 };
 
+// Update the logged-in user's profile (name, gender, education, country)
+export const updateMe = async (req, res) => {
+  try {
+    const { fullname, gender, education, country } = req.body ?? {};
+
+    if (!fullname?.trim() || !gender || !education || !country) {
+      return res.status(400).json({ message: 'All fields are required!' });
+    }
+
+    if (
+      [fullname, gender, education, country].some(
+        (v) => typeof v !== 'string' || v.length > 100
+      )
+    ) {
+      return res.status(400).json({ message: 'Invalid profile data!' });
+    }
+
+    await db.query(
+      'UPDATE debate_users SET fullname = ?, gender = ?, education = ?, country = ? WHERE id = ?',
+      [fullname.trim(), gender, education, country, req.userId]
+    );
+
+    const [data] = await db.query(
+      `SELECT ${PUBLIC_FIELDS} FROM debate_users WHERE id = ?`,
+      [req.userId]
+    );
+
+    if (!data.length) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    return res.status(200).json(data[0]);
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    return res.status(500).json({ message: 'Something went wrong!' });
+  }
+};
+
 export const logout = (req, res) => {
   try {
     res

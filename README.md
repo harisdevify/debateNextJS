@@ -17,12 +17,14 @@ A respectful, moderated platform for Islamic debates with **live video (WebRTC)*
 │   ├── config/db.js      # MySQL connection (env-based)
 │   ├── controllers/      # Route handlers (auth)
 │   ├── routes/           # Express routers
-│   └── app.js            # Server entry point
+│   ├── middleware/       # verifyToken (JWT cookie check)
+│   ├── socket.js         # Socket.IO: matchmaking, WebRTC signaling, chat
+│   └── app.js            # Server entry point (Express + Socket.IO, same port)
 └── client/               # Next.js frontend
     └── src/
         ├── app/          # Routes: /, /login, /register, /profile, /rules, /video
         ├── components/   # Header, Footer, ProtectedRoute
-        ├── hooks/        # useAuth, useChat, useWebRTC
+        ├── hooks/        # useAuth, useDebateRoom (matchmaking + WebRTC + chat)
         └── lib/api.js    # Axios instance
 ```
 
@@ -80,7 +82,8 @@ DB_NAME=debate
 **client/.env.local**
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8800/api/v1
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
+# optional: Socket.IO runs on the API server, so it defaults to the API origin
+# NEXT_PUBLIC_SOCKET_URL=http://localhost:8800
 ```
 
 ## Security Notes
