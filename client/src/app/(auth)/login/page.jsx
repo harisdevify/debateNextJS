@@ -1,4 +1,5 @@
 'use client';
+import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
 import {
   ArrowRight,
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { saveUser } = useAuth();
 
   const handleChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -37,12 +39,14 @@ export default function LoginPage() {
       setLoading(true);
       const res = await api.post('/auth/login', form);
       if (res.status === 200) {
+        // keep the user in localStorage so profile & guards work
+        saveUser(res.data);
         toast.success('Login successfully!');
         router.push('/profile');
       }
     } catch (error) {
-      toast.error(error.response?.data);
-      console.error(error.response);
+      // the api interceptor already shows the error toast
+      console.error(error.response ?? error);
     } finally {
       setLoading(false);
     }

@@ -123,11 +123,6 @@ export default function VideoPage() {
   const handleSend = (text) =>
     setMsgs((prev) => [...prev, { id: Date.now(), sender: 'me', text }]);
 
-  if (!isAuthenticated()) {
-    router.push('/login');
-    return null;
-  }
-
   return (
     <>
       {/* PAGE */}

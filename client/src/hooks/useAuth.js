@@ -31,6 +31,7 @@ export function useAuth() {
     if (typeof window === 'undefined') return;
 
     sessionStorage.removeItem('auth');
+    localStorage.removeItem('user');
     setAuthenticated(false); // update state
   };
 
@@ -44,6 +45,8 @@ export function useAuth() {
   const saveUser = (userData) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('auth', 'true');
+    setAuthenticated(true);
   };
 
   return { isAuthenticated, login, logout, getUser, saveUser };

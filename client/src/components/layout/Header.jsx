@@ -1,4 +1,6 @@
 'use client';
+import { useAuth } from '@/hooks/useAuth';
+import api from '@/lib/api';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -7,6 +9,7 @@ import { toast } from 'sonner';
 export default function Header() {
   const pathname = usePathname();
   const [, startTransition] = useTransition();
+  const { logout } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -25,11 +28,17 @@ export default function Header() {
     };
   }, [sidebarOpen]);
 
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // even if the server call fails, log out locally
+    }
     logout();
     toast.success('You have been logged out.');
     setSidebarOpen(false);
+    window.location.href = '/login';
   };
 
   const navLinkClass = (href) =>

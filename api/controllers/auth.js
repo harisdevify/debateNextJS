@@ -1,95 +1,118 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db } from '../config/db.js';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is missing. Set it in your .env file.');
+}
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+// One cookie config used for both set & clear so they always match
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction, // HTTPS only in production
+  sameSite: isProduction ? 'none' : 'lax',
+};
+
 export const register = async (req, res) => {
   try {
-    //check user email if exist
-    const [data] = await db.query('SELECT * FROM debate_users WHERE email=?', [
-      req.body.email,
-    ]);
+    const { fullname, email, gender, education, country, password } = req.body;
 
-    if (data.length) return res.status(409).json('Email already exist!');
+    // validation
+    if (
+      !fullname ||
+      !email ||
+      !gender ||
+      !education ||
+      !country ||
+      !password
+    ) {
+      return res.status(400).json({ message: 'All fields are required!' });
+    }
 
-    //creating hash password
+    // check if email already exists
+    const [data] = await db.query(
+      'SELECT id FROM debate_users WHERE email = ?',
+      [email]
+    );
+
+    if (data.length) {
+      return res.status(409).json({ message: 'Email already exists!' });
+    }
+
+    // hash password
     const salt = bcrypt.genSaltSync(10);
-    const hashPassword = bcrypt.hashSync(req.body.password, salt);
-
-    const values = [
-      req.body.fullname,
-      req.body.email,
-      req.body.gender,
-      req.body.education,
-      req.body.country,
-      hashPassword,
-    ];
+    const hashPassword = bcrypt.hashSync(password, salt);
 
     await db.query(
       'INSERT INTO debate_users (fullname, email, gender, education, country, password) VALUES (?)',
-      [values]
+      [[fullname, email, gender, education, country, hashPassword]]
     );
 
-    return res.status(200).json('Account created successfully!');
+    return res.status(201).json({ message: 'Account created successfully!' });
   } catch (error) {
-    console.error('Signup Error:', error); // This will print the real error
-    return res
-      .status(500)
-      .json({ message: 'Something went wrong!', error: error.message });
+    console.error('Register Error:', error);
+    // never leak internal error details to the client
+    return res.status(500).json({ message: 'Something went wrong!' });
   }
 };
 
 export const login = async (req, res) => {
   try {
-    //validation
-    if (!req.body.email || !req.body.password)
-      return res.status(400).json('All fields are required!');
+    const { email, password } = req.body;
 
-    //check user if exist
-    const [data] = await db.query('SELECT * FROM debate_users WHERE email=?', [
-      req.body.email,
-    ]);
+    // validation
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: 'Email and password are required!' });
+    }
 
-    if (data.length === 0) return res.status(409).json('Account not found!');
-
-    //compare password
-    const checkPassword = bcrypt.compareSync(
-      req.body.password,
-      data[0].password
+    // check user
+    const [data] = await db.query(
+      'SELECT * FROM debate_users WHERE email = ?',
+      [email]
     );
 
-    if (!checkPassword) return res.status(400).json('Wrong password!');
+    if (data.length === 0) {
+      return res.status(404).json({ message: 'Account not found!' });
+    }
 
-    const token = jwt.sign({ id: data[0].id }, 'seqretkey', {
+    // compare password
+    const checkPassword = bcrypt.compareSync(password, data[0].password);
+
+    if (!checkPassword) {
+      return res.status(401).json({ message: 'Wrong password!' });
+    }
+
+    const token = jwt.sign({ id: data[0].id }, JWT_SECRET, {
       expiresIn: '1d',
     });
-    const { password, ...others } = data[0];
+
+    // remove password before sending the user object back
+    const { password: _password, ...others } = data[0];
 
     return res
-      .cookie('accessToken', token, {
-        httpOnly: true,
-      })
+      .cookie('accessToken', token, cookieOptions)
       .status(200)
       .json(others);
   } catch (error) {
-    console.error('Signup Error:', error); // This will print the real error
-    return res
-      .status(500)
-      .json({ message: 'Something went wrong!', error: error.message });
+    console.error('Login Error:', error);
+    return res.status(500).json({ message: 'Something went wrong!' });
   }
 };
+
 export const logout = (req, res) => {
   try {
     res
-      .clearCookie('accessToken', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      })
+      .clearCookie('accessToken', cookieOptions)
       .status(200)
-      .json('Logout Successfully!');
+      .json({ message: 'Logged out successfully!' });
   } catch (error) {
-    console.error('Signup Error:', error); // This will print the real error
-    return res
-      .status(500)
-      .json({ message: 'Something went wrong!', error: error.message });
+    console.error('Logout Error:', error);
+    return res.status(500).json({ message: 'Something went wrong!' });
   }
 };

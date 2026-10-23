@@ -76,15 +76,14 @@ export default function SignUpPage() {
 
     try {
       setLoading(true);
-      if (loading) return;
       const res = await api.post('/auth/register', form);
       if (res.status === 200 || res.status === 201) {
         toast.success('Account created successfully!');
         router.push('/login');
       }
     } catch (error) {
-      toast.error(error.response?.data);
-      console.error(error.response);
+      // the api interceptor already shows the error toast
+      console.error(error.response ?? error);
     } finally {
       setLoading(false);
     }
