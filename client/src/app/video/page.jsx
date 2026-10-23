@@ -12,15 +12,17 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { useWebRTC } from '../../hooks/useWebRTC';
+import { useDebateRoom } from '../../hooks/useDebateRoom';
 
 const PLACEHOLDER = 'var(--background)';
 
-const DEMO_MSGS = [
-  { id: 1, sender: 'other', text: 'Hey! Can you hear me okay? 🎧' },
-  { id: 2, sender: 'me', text: 'Loud and clear! 👋' },
-  { id: 3, sender: 'other', text: "Great, let's get started." },
-];
+// What to show on top of the remote video until a partner is connected
+const STATUS_TEXT = {
+  starting: 'Starting your camera…',
+  searching: 'Looking for a debate partner…',
+  'peer-left': 'Your partner left the debate.',
+  error: 'Could not start. Check camera access and refresh.',
+};
 
 /* ── Chat Body ─────────────────────────────── */
 function ChatBody({ msgs }) {
@@ -105,21 +107,38 @@ function DebateRoom() {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
   const router = useRouter();
-  const { toggleMic, toggleCamera } = useWebRTC(localRef, remoteRef);
+  const {
+    status,
+    peerName,
+    messages: msgs,
+    sendMessage,
+    findNext,
+    toggleMic,
+    toggleCamera,
+  } = useDebateRoom(localRef, remoteRef);
 
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
-  const [msgs, setMsgs] = useState(DEMO_MSGS);
-  const [unread, setUnread] = useState(2);
+  // messages the user has already seen (mobile chat drawer)
+  const [readCount, setReadCount] = useState(0);
+  const unread = chatOpen
+    ? 0
+    : msgs.slice(readCount).filter((m) => m.sender === 'other').length;
 
   const openChat = () => {
     setChatOpen(true);
-    setUnread(0);
+    setReadCount(msgs.length);
   };
-  const closeChat = () => setChatOpen(false);
-  const handleSend = (text) =>
-    setMsgs((prev) => [...prev, { id: Date.now(), sender: 'me', text }]);
+  const closeChat = () => {
+    setChatOpen(false);
+    setReadCount(msgs.length);
+  };
+  const handleSend = (text) => sendMessage(text);
+  const handleNext = () => {
+    setReadCount(0);
+    findNext();
+  };
 
   return (
     <>
@@ -151,13 +170,38 @@ function DebateRoom() {
                 />
                 {/* gloss overlay */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" />
+
+                {/* status until a partner is connected */}
+                {status !== 'connected' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-center">
+                    <p className="text-sm text-white/70">{STATUS_TEXT[status]}</p>
+                    {status === 'peer-left' && (
+                      <button
+                        onClick={handleNext}
+                        className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover"
+                      >
+                        Find next partner
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <span
                   className="absolute top-3 left-3 text-[0.68rem] font-semibold tracking-[0.1em] uppercase
                                  text-white/65 bg-[rgba(7,9,14,0.55)] backdrop-blur-[10px]
                                  px-2.5 py-1 rounded-full border border-white/9"
                 >
-                  Remote
+                  {status === 'connected' && peerName ? peerName : 'Partner'}
                 </span>
+
+                {status === 'connected' && (
+                  <button
+                    onClick={handleNext}
+                    className="pressable absolute top-3 right-3 rounded-full border border-white/10 bg-[rgba(7,9,14,0.55)] px-3 py-1 text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                  >
+                    Next
+                  </button>
+                )}
               </div>
 
               {/* Local tile — teal glow ring */}

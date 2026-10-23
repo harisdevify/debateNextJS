@@ -11,15 +11,22 @@ import {
 
 const AuthContext = createContext(null);
 
-// Profile edits/avatar are not stored in the DB yet (no endpoint),
-// so they live in localStorage until a PATCH /auth/me exists.
+// Name/gender/education/country are saved in the DB (PATCH /auth/me).
+// The avatar has no DB column yet, so it stays in localStorage.
 const OVERRIDES_KEY = 'debate:profile-overrides';
-const OVERRIDE_FIELDS = ['fullname', 'gender', 'education', 'country', 'avatar'];
+const OVERRIDE_FIELDS = ['avatar'];
 
 const readOverrides = () => {
   if (typeof window === 'undefined') return {};
   try {
-    return JSON.parse(localStorage.getItem(OVERRIDES_KEY)) || {};
+    const stored = JSON.parse(localStorage.getItem(OVERRIDES_KEY)) || {};
+    // ignore anything else an older version may have saved
+    return Object.fromEntries(
+      OVERRIDE_FIELDS.filter((k) => stored[k] !== undefined).map((k) => [
+        k,
+        stored[k],
+      ])
+    );
   } catch {
     return {};
   }
@@ -44,6 +51,12 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     const res = await api.post('/auth/login', credentials);
+    setUser(res.data);
+    return res.data;
+  }, []);
+
+  const updateProfile = useCallback(async (fields) => {
+    const res = await api.patch('/auth/me', fields);
     setUser(res.data);
     return res.data;
   }, []);
@@ -76,8 +89,26 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, isAuthenticated, getUser, saveUser }),
-    [user, loading, login, logout, isAuthenticated, getUser, saveUser]
+    () => ({
+      user,
+      loading,
+      login,
+      logout,
+      updateProfile,
+      isAuthenticated,
+      getUser,
+      saveUser,
+    }),
+    [
+      user,
+      loading,
+      login,
+      logout,
+      updateProfile,
+      isAuthenticated,
+      getUser,
+      saveUser,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
