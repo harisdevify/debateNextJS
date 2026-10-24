@@ -1,6 +1,18 @@
 'use client';
 import { createSocket } from '@/lib/socket';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  ChatMessage,
+  DebateStatus,
+  MatchedPayload,
+} from '@/types';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
+import type { Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 
 const ICE_SERVERS = {
@@ -13,15 +25,19 @@ const ICE_SERVERS = {
  *
  * status: 'starting' | 'searching' | 'connected' | 'peer-left' | 'error'
  */
-export function useDebateRoom(localVideoRef, remoteVideoRef) {
-  const socketRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const peerRef = useRef(null);
-  const pendingIceRef = useRef([]); // candidates that arrived before the SDP
+export function useDebateRoom(
+  localVideoRef: RefObject<HTMLVideoElement | null>,
+  remoteVideoRef: RefObject<HTMLVideoElement | null>
+) {
+  const socketRef = useRef<Socket | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  // candidates that arrived before the SDP
+  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
 
-  const [status, setStatus] = useState('starting');
+  const [status, setStatus] = useState<DebateStatus>('starting');
   const [peerName, setPeerName] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   /* ── helpers ── */
   const closePeer = useCallback(() => {
@@ -34,9 +50,8 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
   const createPeer = useCallback(() => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    localStreamRef.current
-      ?.getTracks()
-      .forEach((t) => pc.addTrack(t, localStreamRef.current));
+    const local = localStreamRef.current;
+    local?.getTracks().forEach((t) => pc.addTrack(t, local));
 
     pc.ontrack = (e) => {
       if (remoteVideoRef.current)
@@ -57,7 +72,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
     socketRef.current = socket;
     let cancelled = false;
 
-    const flushIce = async (pc) => {
+    const flushIce = async (pc: RTCPeerConnection) => {
       const queued = pendingIceRef.current;
       pendingIceRef.current = [];
       for (const candidate of queued) {
@@ -78,7 +93,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
 
     socket.on('connect', startSearching);
 
-    socket.on('connect_error', (err) => {
+    socket.on('connect_error', (err: Error) => {
       setStatus('error');
       toast.error(
         err.message === 'Not authenticated'
@@ -94,7 +109,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
 
     socket.on('waiting', () => setStatus('searching'));
 
-    socket.on('matched', async ({ initiator, peer }) => {
+    socket.on('matched', async ({ initiator, peer }: MatchedPayload) => {
       closePeer();
       setMessages([]);
       setPeerName(peer?.fullname || '');
@@ -108,7 +123,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
       }
     });
 
-    socket.on('offer', async (offer) => {
+    socket.on('offer', async (offer: RTCSessionDescriptionInit) => {
       const pc = peerRef.current ?? createPeer();
       await pc.setRemoteDescription(offer);
       await flushIce(pc);
@@ -117,14 +132,14 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
       socket.emit('answer', answer);
     });
 
-    socket.on('answer', async (answer) => {
+    socket.on('answer', async (answer: RTCSessionDescriptionInit) => {
       const pc = peerRef.current;
       if (!pc) return;
       await pc.setRemoteDescription(answer);
       await flushIce(pc);
     });
 
-    socket.on('ice-candidate', async (candidate) => {
+    socket.on('ice-candidate', async (candidate: RTCIceCandidateInit) => {
       const pc = peerRef.current;
       if (!pc || !pc.remoteDescription) {
         pendingIceRef.current.push(candidate);
@@ -143,7 +158,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
       toast.info('Your partner left the debate.');
     });
 
-    socket.on('chatMessage', ({ text }) => {
+    socket.on('chatMessage', ({ text }: { text: string }) => {
       setMessages((prev) => [
         ...prev,
         { id: `${Date.now()}-${prev.length}`, text, sender: 'other' },
@@ -190,7 +205,7 @@ export function useDebateRoom(localVideoRef, remoteVideoRef) {
   }, [closePeer]);
 
   const sendMessage = useCallback(
-    (text) => {
+    (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return false;
       if (status !== 'connected') {

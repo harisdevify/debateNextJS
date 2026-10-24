@@ -1,7 +1,9 @@
 import Footer from '@/components/layout/Footer';
 import Header from '@/components/layout/Header';
 import { AuthProvider } from '@/context/AuthContext';
+import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import type { ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -15,13 +17,13 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Debate — Islamic Discussion Platform',
   description:
     'Engage in respectful, guided Islamic debates through live video and text.',
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body

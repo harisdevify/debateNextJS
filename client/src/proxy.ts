@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // Next.js 16: `middleware` was renamed to `proxy`.
 // Fast gate only (is the cookie present?). The API verifies the JWT for real
@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 // a domain (localhost in dev). On separate domains the in-page gates still apply.
 const PROTECTED = ['/profile', '/video'];
 
-export function proxy(request) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)

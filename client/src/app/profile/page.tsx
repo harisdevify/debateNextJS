@@ -16,9 +16,16 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
+import type { ProfileFields } from '@/types';
 
 const AVATAR_COLORS = [
   'from-[#00bfa6] to-[#007a6a]',
@@ -51,32 +58,38 @@ const inputClass = `w-full px-4 py-3 rounded-xl bg-white/[0.05] text-white borde
 function ProfileContent() {
   const { getUser, saveUser, updateProfile } = useAuth();
   const storedUser = getUser();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ProfileFields>({
     fullname: storedUser?.fullname || '',
     gender: storedUser?.gender || '',
     education: storedUser?.education || '',
     country: storedUser?.country || '',
   });
-  const [avatarSrc, setAvatarSrc] = useState(storedUser?.avatar || null);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(
+    storedUser?.avatar || null
+  );
   const [editing, setEditing] = useState(false);
-  const fileRef = useRef(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e) =>
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setAvatarSrc(ev.target.result);
-      saveUser({ avatar: ev.target.result });
+      const result = ev.target?.result;
+      if (typeof result !== 'string') return;
+      setAvatarSrc(result);
+      saveUser({ avatar: result });
       toast.success('Profile picture updated!');
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const unchanged =
       form.fullname === storedUser?.fullname &&
@@ -164,6 +177,8 @@ function ProfileContent() {
                                 bg-gradient-to-br ${avatarGrad} shadow-xl`}
                   >
                     {avatarSrc ? (
+                      // avatar is a local data URL, so next/image cannot optimise it
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={avatarSrc}
                         alt="avatar"

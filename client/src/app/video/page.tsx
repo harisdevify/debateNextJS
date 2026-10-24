@@ -1,5 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
+import type { ChatMessage, DebateStatus } from '@/types';
 import {
   MessageCircle,
   Mic,
@@ -17,7 +18,7 @@ import { useDebateRoom } from '../../hooks/useDebateRoom';
 const PLACEHOLDER = 'var(--background)';
 
 // What to show on top of the remote video until a partner is connected
-const STATUS_TEXT = {
+const STATUS_TEXT: Record<Exclude<DebateStatus, 'connected'>, string> = {
   starting: 'Starting your camera…',
   searching: 'Looking for a debate partner…',
   'peer-left': 'Your partner left the debate.',
@@ -25,8 +26,8 @@ const STATUS_TEXT = {
 };
 
 /* ── Chat Body ─────────────────────────────── */
-function ChatBody({ msgs }) {
-  const endRef = useRef(null);
+function ChatBody({ msgs }: { msgs: ChatMessage[] }) {
+  const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
@@ -59,7 +60,7 @@ function ChatBody({ msgs }) {
 }
 
 /* ── Chat Input ────────────────────────────── */
-function ChatInputRow({ onSend }) {
+function ChatInputRow({ onSend }: { onSend?: (text: string) => void }) {
   const [val, setVal] = useState('');
   const send = () => {
     if (!val.trim()) return;
@@ -134,7 +135,7 @@ function DebateRoom() {
     setChatOpen(false);
     setReadCount(msgs.length);
   };
-  const handleSend = (text) => sendMessage(text);
+  const handleSend = (text: string) => sendMessage(text);
   const handleNext = () => {
     setReadCount(0);
     findNext();

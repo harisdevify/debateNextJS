@@ -21,6 +21,8 @@ pnpm-debug.log*
 .next/
 out/
 dist/
+*.tsbuildinfo
+next-env.d.ts
 
 # Editor folders
 .vscode/
