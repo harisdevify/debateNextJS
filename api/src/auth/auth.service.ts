@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -21,6 +20,15 @@ const publicUserSelect = {
   country: true,
 } as const;
 
+function isPrismaError(error: unknown, code: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === code
+  );
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -29,17 +37,8 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    console.log('REGISTER HANDLER HIT');
-    const fullname = dto.fullname.trim();
-    const gender = dto.gender.trim();
-    const education = dto.education.trim();
-    const country = dto.country.trim();
-
-    if (!fullname || !gender || !education || !country) {
-      throw new BadRequestException('All fields are required!');
-    }
-
-    const email = dto.email.trim().toLowerCase();
+    // dto is already trimmed, lower-cased (email) and validated
+    const { fullname, email, gender, education, country } = dto;
     const password = await bcrypt.hash(dto.password, 10);
 
     try {
@@ -49,24 +48,20 @@ export class AuthService {
 
       return { message: 'Account created successfully!' };
     } catch (error) {
-      console.error('Register error:', error);
-
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
+      // unique constraint on email: an expected outcome, not a server error
+      if (isPrismaError(error, 'P2002')) {
         throw new ConflictException('Email already exists!');
       }
 
+      console.error('Register error:', error);
       throw new InternalServerErrorException('Something went wrong!');
     }
   }
 
   async login(dto: LoginDto) {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
 
     const valid = user
       ? await bcrypt.compare(dto.password, user.password)
@@ -105,35 +100,24 @@ export class AuthService {
   }
 
   async updateMe(userId: number, dto: UpdateProfileDto) {
-    const data = {
-      fullname: dto.fullname.trim(),
-      gender: dto.gender.trim(),
-      education: dto.education.trim(),
-      country: dto.country.trim(),
-    };
-
-    if (Object.values(data).some((value) => !value)) {
-      throw new BadRequestException('All fields are required!');
-    }
-
     try {
       return await this.prisma.user.update({
         where: { id: userId },
-        data,
+        data: {
+          fullname: dto.fullname,
+          gender: dto.gender,
+          education: dto.education,
+          country: dto.country,
+        },
         select: publicUserSelect,
       });
     } catch (error) {
-      console.error('Register error:', error);
-
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Email already exists!');
+      // record not found: the account was deleted while the token was valid
+      if (isPrismaError(error, 'P2025')) {
+        throw new UnauthorizedException('User not found!');
       }
 
+      console.error('Update profile error:', error);
       throw new InternalServerErrorException('Something went wrong!');
     }
   }
