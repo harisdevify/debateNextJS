@@ -27,15 +27,19 @@ client/                   # Existing Next.js frontend; UI files intentionally pr
 
 ## Requirements
 
-- Node.js 20 or newer
-- PostgreSQL 15 or newer
+- Node.js 22.18 or newer (required by Prisma 7)
+- PostgreSQL 15 or newer (or Docker, see below)
 - npm
 
 ## Local setup
 
 ### 1. Create a fresh PostgreSQL database
 
-Create an empty database named `debate` using your PostgreSQL admin tool, or run `CREATE DATABASE debate;` in `psql`. The old MySQL data is intentionally not migrated.
+**With Docker (easiest):** from the repository root run `docker compose up -d`. This starts PostgreSQL 16 with a `debate` database and the credentials used in the example below.
+
+**Without Docker:** create an empty database named `debate` using your PostgreSQL admin tool, or run `CREATE DATABASE debate;` in `psql`.
+
+The old MySQL data is intentionally not migrated.
 
 ### 2. Configure and run the API
 
@@ -53,6 +57,17 @@ npm run dev
 ```
 
 The API listens on `http://localhost:8800`. Health check: `GET /api/v1/health`.
+
+The Prisma client is generated code and is **not** committed: `npm run dev`, `npm run build`, `npm run typecheck` and `npm run test:e2e` generate it automatically (or run `npm run prisma:generate`).
+
+#### Tests
+
+With the database running and migrated:
+
+```bash
+cd api
+npm run test:e2e   # auth, validation, matchmaking, signaling and chat against real PostgreSQL
+```
 
 ### 3. Run the existing frontend
 

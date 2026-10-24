@@ -1,12 +1,29 @@
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { Trim } from '../../common/trim.decorator';
+import { REQUIRED_MESSAGE } from './register.dto';
 
 export class UpdateProfileDto {
-  @IsString() @MinLength(1) @MaxLength(100)
+  @Trim()
+  @IsString({ message: REQUIRED_MESSAGE })
+  @IsNotEmpty({ message: REQUIRED_MESSAGE })
+  @MaxLength(100, { message: 'Name is too long!' })
   fullname!: string;
-  @IsString() @MinLength(1) @MaxLength(20)
+
+  @Trim()
+  @IsString({ message: REQUIRED_MESSAGE })
+  @IsNotEmpty({ message: REQUIRED_MESSAGE })
+  @MaxLength(20, { message: 'Gender is too long!' })
   gender!: string;
-  @IsString() @MinLength(1) @MaxLength(100)
+
+  @Trim()
+  @IsString({ message: REQUIRED_MESSAGE })
+  @IsNotEmpty({ message: REQUIRED_MESSAGE })
+  @MaxLength(100, { message: 'Education is too long!' })
   education!: string;
-  @IsString() @MinLength(1) @MaxLength(100)
+
+  @Trim()
+  @IsString({ message: REQUIRED_MESSAGE })
+  @IsNotEmpty({ message: REQUIRED_MESSAGE })
+  @MaxLength(100, { message: 'Country is too long!' })
   country!: string;
 }

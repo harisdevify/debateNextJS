@@ -1,0 +1,10 @@
+# Prisma client is generated (`prisma generate`, run by dev/build/typecheck) - never commit it
+/src/generated/
+/generated/
+
+# Build output
+/dist/
+*.tsbuildinfo
+
+# Secrets
+.env
