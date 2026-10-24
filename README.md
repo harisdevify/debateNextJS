@@ -1,112 +1,99 @@
 # Debate — Islamic Discussion Platform
 
-A respectful, moderated platform for Islamic debates with **live video (WebRTC)**, **real-time text chat (Socket.IO)**, and user authentication.
+A respectful discussion platform with live video (WebRTC), real-time chat (Socket.IO), and cookie-based authentication.
 
-## Tech Stack
+## Technology stack
 
-| Layer    | Technology |
-|----------|------------|
-| Frontend | Next.js 16 (App Router), React 19, Tailwind CSS v4, Axios, Sonner |
-| Backend  | Express 5, JWT (httpOnly cookie), bcryptjs, MySQL (mysql2) |
-| Realtime | Socket.IO + WebRTC (STUN) |
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16, React 19, Tailwind CSS v4, Axios, Sonner |
+| Backend | NestJS 11, TypeScript, JWT httpOnly cookie, bcrypt |
+| Database | PostgreSQL + Prisma ORM |
+| Realtime | Socket.IO + WebRTC (STUN configured; TURN is a deployment follow-up) |
 
-## Project Structure
+## Repository layout
 
 ```
-├── api/                  # Express REST API
-│   ├── config/db.js      # MySQL connection (env-based)
-│   ├── controllers/      # Route handlers (auth)
-│   ├── routes/           # Express routers
-│   ├── middleware/       # verifyToken (JWT cookie check)
-│   ├── socket.js         # Socket.IO: matchmaking, WebRTC signaling, chat
-│   └── app.js            # Server entry point (Express + Socket.IO, same port)
-└── client/               # Next.js frontend
-    └── src/
-        ├── app/          # Routes: /, /login, /register, /profile, /rules, /video
-        ├── components/   # Header, Footer, ProtectedRoute
-        ├── hooks/        # useAuth, useDebateRoom (matchmaking + WebRTC + chat)
-        └── lib/api.js    # Axios instance
+api/
+  prisma/                 # PostgreSQL schema and SQL migration
+  src/
+    auth/                 # Register, login, logout, profile, JWT guard and DTOs
+    prisma/               # Shared Prisma service
+    realtime/              # Socket.IO auth, matchmaking, signaling and chat
+    app.module.ts
+    main.ts
+client/                   # Existing Next.js frontend; UI files intentionally preserved
 ```
 
-## Getting Started
+## Requirements
 
-### 1. Database (MySQL)
+- Node.js 20 or newer
+- PostgreSQL 15 or newer
+- npm
 
-```sql
-CREATE DATABASE IF NOT EXISTS debate;
-USE debate;
+## Local setup
 
-CREATE TABLE IF NOT EXISTS debate_users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  fullname VARCHAR(100) NOT NULL,
-  email VARCHAR(150) NOT NULL UNIQUE,
-  gender VARCHAR(20) NOT NULL,
-  education VARCHAR(100) NOT NULL,
-  country VARCHAR(100) NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### 1. Create a fresh PostgreSQL database
 
-### 2. API (`api/`)
+Create an empty database named `debate` using your PostgreSQL admin tool, or run `CREATE DATABASE debate;` in `psql`. The old MySQL data is intentionally not migrated.
+
+### 2. Configure and run the API
 
 ```bash
 cd api
-cp .env.example .env        # fill in your DB credentials + JWT secret
-npm install
-npm run dev                 # http://localhost:8800
+cp .env.example .env
 ```
 
-### 3. Client (`client/`)
+Edit `api/.env` and set a strong, unique `JWT_SECRET` and your PostgreSQL `DATABASE_URL`. Then run:
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run dev
+```
+
+The API listens on `http://localhost:8800`. Health check: `GET /api/v1/health`.
+
+### 3. Run the existing frontend
+
+In a separate terminal:
 
 ```bash
 cd client
 cp .env.example .env.local
 npm install
-npm run dev                 # http://localhost:3000
+npm run dev
 ```
 
-## Environment Variables
+The existing API client defaults to `http://localhost:8800/api/v1`; Socket.IO defaults to the API origin. The frontend source and styling have not been redesigned as part of this migration.
 
-**api/.env**
-```
+## Existing API contract
+
+- `POST /api/v1/auth/register` — create an account; returns a message.
+- `POST /api/v1/auth/login` — sets the httpOnly `accessToken` cookie and returns public user fields.
+- `POST /api/v1/auth/logout` — clears the auth cookie.
+- `GET /api/v1/auth/me` — returns the current user's public fields.
+- `PATCH /api/v1/auth/me` — updates fullname, gender, education and country.
+- Socket.IO events remain `find-partner`, `waiting`, `matched`, `offer`, `answer`, `ice-candidate`, `chatMessage`, `leave`, and `peer-left`.
+
+## Environment variables
+
+`api/.env` (never commit this file):
+
+```env
 PORT=8800
+NODE_ENV=development
 CLIENT_URL=http://localhost:3000
-JWT_SECRET=<long-random-string>
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=<your-db-password>
-DB_NAME=debate
+JWT_SECRET=replace-with-a-unique-random-secret
+DATABASE_URL=postgresql://postgres:your-password@localhost:5432/debate?schema=public
 ```
 
-**client/.env.local**
-```
-NEXT_PUBLIC_API_URL=http://localhost:8800/api/v1
-# optional: Socket.IO runs on the API server, so it defaults to the API origin
-# NEXT_PUBLIC_SOCKET_URL=http://localhost:8800
-```
+## Verification notes
 
-## Security Notes
+A GitHub Actions workflow checks backend build/type safety and the existing frontend production build. A source commit alone is not proof that builds passed; check workflow results and run local database/auth/video smoke tests before deploying.
 
-- Secrets live in `.env` files only — **never** commit them.
-- JWT is stored in an `httpOnly` cookie (not readable by JavaScript).
-- Passwords are hashed with bcrypt (cost 10).
-- All SQL queries are parameterized.
-- If a secret was ever committed to git, rotate it and purge history:
-  ```bash
-  git rm -r --cached api/node_modules
-  git filter-repo --path api/config/db.js --invert-paths   # or use BFG
-  ```
+## Security
 
-## Scripts
-
-| Location | Command | Purpose |
-|----------|---------|---------|
-| `api/` | `npm run dev` | Start API with nodemon |
-| `api/` | `npm start` | Start API (production) |
-| `client/` | `npm run dev` | Next.js dev server |
-| `client/` | `npm run build` | Production build |
-
----
-
-Developed by **M Haris**
+- Never commit `.env` files or reuse exposed secrets.
+- Use HTTPS in production; cookies are httpOnly and secure in production.
+- Configure a TURN service before relying on WebRTC across restrictive NATs/firewalls.

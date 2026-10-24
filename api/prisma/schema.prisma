@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullname  String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  gender    String   @db.VarChar(20)
+  education String   @db.VarChar(100)
+  country   String   @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("debate_users")
+}
