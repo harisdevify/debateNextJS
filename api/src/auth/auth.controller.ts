@@ -1,7 +1,20 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
-import { AuthenticatedUser, CurrentUser } from './decorators/current-user.decorator';
+import {
+  AuthenticatedUser,
+  CurrentUser,
+} from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -13,18 +26,30 @@ export class AuthController {
 
   private cookieOptions() {
     const production = process.env.NODE_ENV === 'production';
-    return { httpOnly: true, secure: production, sameSite: production ? ('none' as const) : ('lax' as const) };
+    return {
+      httpOnly: true,
+      secure: production,
+      sameSite: production ? ('none' as const) : ('lax' as const),
+    };
   }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  register(@Body() dto: RegisterDto) { return this.authService.register(dto); }
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
     const result = await this.authService.login(dto);
-    response.cookie('accessToken', result.accessToken, { ...this.cookieOptions(), maxAge: 24 * 60 * 60 * 1000 });
+    response.cookie('accessToken', result.accessToken, {
+      ...this.cookieOptions(),
+      maxAge: 24 * 60 * 60 * 1000,
+    });
     return result.user;
   }
 
@@ -37,11 +62,16 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  me(@CurrentUser() user: AuthenticatedUser) { return this.authService.me(user.id); }
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.me(user.id);
+  }
 
   @Patch('me')
   @UseGuards(JwtAuthGuard)
-  updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateProfileDto) {
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto
+  ) {
     return this.authService.updateMe(user.id, dto);
   }
 }
