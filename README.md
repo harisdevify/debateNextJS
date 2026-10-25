@@ -6,7 +6,7 @@ A respectful discussion platform with live video (WebRTC), real-time chat (Socke
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 19, Tailwind CSS v4, Axios, Sonner |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS v4, Axios, Sonner |
 | Backend | NestJS 11, TypeScript, JWT httpOnly cookie, bcrypt |
 | Database | PostgreSQL + Prisma ORM |
 | Realtime | Socket.IO + WebRTC (STUN configured; TURN is a deployment follow-up) |
@@ -79,6 +79,8 @@ cp .env.example .env.local
 npm install
 npm run dev
 ```
+
+Useful checks: `npm run typecheck` (tsc) and `npm run lint` (ESLint).
 
 The existing API client defaults to `http://localhost:8800/api/v1`; Socket.IO defaults to the API origin. The frontend source and styling have not been redesigned as part of this migration.
 

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 const highlights = [
@@ -28,11 +28,11 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const handleChange = (e) =>
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   // router push ke alawa, use api call only
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       setLoading(true);

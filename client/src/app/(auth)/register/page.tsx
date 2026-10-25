@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 const INITIAL = {
@@ -54,7 +54,7 @@ const fields = [
     placeholder: 'Enter your email',
     icon: Mail,
   },
-];
+] as const;
 
 const perks = [
   'Join live Islamic debates instantly',
@@ -68,10 +68,10 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleChange = (e) =>
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
@@ -83,7 +83,7 @@ export default function SignUpPage() {
       }
     } catch (error) {
       // the api interceptor already shows the error toast
-      console.error(error.response ?? error);
+      console.error(error);
     } finally {
       setLoading(false);
     }

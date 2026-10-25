@@ -3,7 +3,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import {
+  useEffect,
+  useState,
+  useTransition,
+  type MouseEvent,
+} from 'react';
 import { toast } from 'sonner';
 
 export default function Header() {
@@ -29,7 +34,7 @@ export default function Header() {
     };
   }, [sidebarOpen]);
 
-  const handleLogout = async (e) => {
+  const handleLogout = async (e: MouseEvent<HTMLElement>) => {
     e.preventDefault();
     await logout(); // clears the cookie on the server, then the local state
     toast.success('You have been logged out.');
@@ -37,11 +42,11 @@ export default function Header() {
     router.push('/login');
   };
 
-  const navLinkClass = (href) =>
+  const navLinkClass = (href: string) =>
     `nav-link pressable px-3 py-1.5 text-[0.95rem] transition-colors duration-200 hover:text-primary
      ${pathname === href ? 'active text-primary font-semibold' : 'text-white/80'}`;
 
-  const sidebarLinkClass = (href) =>
+  const sidebarLinkClass = (href: string) =>
     `flex items-center gap-3 px-4 py-3 rounded-xl text-[1rem] font-medium transition-all duration-200
      ${
        pathname === href

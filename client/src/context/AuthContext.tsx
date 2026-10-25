@@ -1,5 +1,6 @@
 'use client';
 import api from '@/lib/api';
+import type { LoginCredentials, ProfileFields, User } from '@/types';
 import {
   createContext,
   useCallback,
@@ -7,40 +8,56 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from 'react';
 
-const AuthContext = createContext(null);
+interface AuthContextValue {
+  user: User | null;
+  /** true until the first /auth/me check has finished */
+  loading: boolean;
+  login: (credentials: LoginCredentials) => Promise<User>;
+  logout: () => Promise<void>;
+  updateProfile: (fields: ProfileFields) => Promise<User>;
+  isAuthenticated: () => boolean;
+  getUser: () => User | null;
+  saveUser: (data: Partial<User>) => void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 // Name/gender/education/country are saved in the DB (PATCH /auth/me).
 // The avatar has no DB column yet, so it stays in localStorage.
 const OVERRIDES_KEY = 'debate:profile-overrides';
-const OVERRIDE_FIELDS = ['avatar'];
+const OVERRIDE_FIELDS = ['avatar'] as const;
 
-const readOverrides = () => {
+type Overrides = Partial<Pick<User, (typeof OVERRIDE_FIELDS)[number]>>;
+
+const readOverrides = (): Overrides => {
   if (typeof window === 'undefined') return {};
   try {
-    const stored = JSON.parse(localStorage.getItem(OVERRIDES_KEY)) || {};
+    const stored = JSON.parse(
+      localStorage.getItem(OVERRIDES_KEY) ?? '{}'
+    ) as Overrides;
     // ignore anything else an older version may have saved
-    return Object.fromEntries(
-      OVERRIDE_FIELDS.filter((k) => stored[k] !== undefined).map((k) => [
-        k,
-        stored[k],
-      ])
-    );
+    const result: Overrides = {};
+    for (const key of OVERRIDE_FIELDS) {
+      if (stored[key] !== undefined) result[key] = stored[key];
+    }
+    return result;
   } catch {
     return {};
   }
 };
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Source of truth is the server: the cookie is httpOnly, so ask /auth/me.
   useEffect(() => {
     let active = true;
     api
-      .get('/auth/me', { silent: true })
+      .get<User>('/auth/me', { silent: true })
       .then((res) => active && setUser(res.data))
       .catch(() => active && setUser(null))
       .finally(() => active && setLoading(false));
@@ -49,14 +66,14 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    const res = await api.post('/auth/login', credentials);
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    const res = await api.post<User>('/auth/login', credentials);
     setUser(res.data);
     return res.data;
   }, []);
 
-  const updateProfile = useCallback(async (fields) => {
-    const res = await api.patch('/auth/me', fields);
+  const updateProfile = useCallback(async (fields: ProfileFields) => {
+    const res = await api.patch<User>('/auth/me', fields);
     setUser(res.data);
     return res.data;
   }, []);
@@ -77,18 +94,18 @@ export function AuthProvider({ children }) {
     [user]
   );
 
-  const saveUser = useCallback((data) => {
-    const next = {};
-    OVERRIDE_FIELDS.forEach((key) => {
-      if (data?.[key] !== undefined) next[key] = data[key];
-    });
+  const saveUser = useCallback((data: Partial<User>) => {
+    const next: Overrides = {};
+    for (const key of OVERRIDE_FIELDS) {
+      if (data[key] !== undefined) next[key] = data[key];
+    }
     localStorage.setItem(
       OVERRIDES_KEY,
       JSON.stringify({ ...readOverrides(), ...next })
     );
   }, []);
 
-  const value = useMemo(
+  const value = useMemo<AuthContextValue>(
     () => ({
       user,
       loading,
@@ -114,7 +131,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;

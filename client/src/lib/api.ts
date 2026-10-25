@@ -1,4 +1,5 @@
-import axios from 'axios';
+import type { ApiErrorBody } from '@/types';
+import axios, { type AxiosError } from 'axios';
 import { toast } from 'sonner';
 
 const api = axios.create({
@@ -9,14 +10,16 @@ const api = axios.create({
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError<ApiErrorBody | string>) => {
     // Pass `{ silent: true }` in the request config to skip the toast
     // (used for the /auth/me check on page load).
     if (!error.config?.silent) {
       const data = error.response?.data;
-      // API errors are { message: '...' } but handle plain strings too
+      // API errors are { message: '...' }; validation errors may carry a
+      // list of messages, and some proxies return a plain string.
+      const raw = typeof data === 'string' ? data : data?.message;
       const message =
-        (typeof data === 'string' ? data : data?.message) ||
+        (Array.isArray(raw) ? raw[0] : raw) ||
         error.message ||
         'Something went wrong';
 
