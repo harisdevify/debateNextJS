@@ -18,6 +18,8 @@ interface AuthContextValue {
   login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => Promise<void>;
   updateProfile: (fields: ProfileFields) => Promise<User>;
+  /** Accept the rules and confirm 18+ (accounts created before the rules existed). */
+  acceptRules: () => Promise<User>;
   isAuthenticated: () => boolean;
   getUser: () => User | null;
   saveUser: (data: Partial<User>) => void;
@@ -78,6 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.data;
   }, []);
 
+  const acceptRules = useCallback(async () => {
+    const res = await api.post<User>('/auth/accept-rules', {
+      acceptRules: true,
+      confirmAge: true,
+    });
+    setUser(res.data);
+    return res.data;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout', null, { silent: true });
@@ -112,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateProfile,
+      acceptRules,
       isAuthenticated,
       getUser,
       saveUser,
@@ -122,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateProfile,
+      acceptRules,
       isAuthenticated,
       getUser,
       saveUser,

@@ -18,6 +18,8 @@ const newUser = (name = `User ${++counter}`) => ({
   education: 'BS',
   country: 'PK',
   password: PASSWORD,
+  acceptRules: true,
+  confirmAge: true,
 });
 
 describe('Debate API (e2e)', () => {
@@ -154,6 +156,51 @@ describe('Debate API (e2e)', () => {
       const out = await http.post('/api/v1/auth/logout').set('Cookie', cookie).expect(200);
       expect((out.headers['set-cookie'] as unknown as string[])[0]).toMatch(/accessToken=;/);
     });
+    it('register: rules and 18+ confirmation are required and stored', async () => {
+      const RULES = 'You must accept the rules and confirm you are 18 or older!';
+      const base = newUser();
+      const { acceptRules: _a, confirmAge: _c, ...withoutFlags } = base;
+
+      const missing = await http.post('/api/v1/auth/register').send(withoutFlags).expect(400);
+      expect(missing.body.message).toBe(RULES);
+      const noRules = await http.post('/api/v1/auth/register').send({ ...base, acceptRules: false }).expect(400);
+      expect(noRules.body.message).toBe(RULES);
+      const noAge = await http.post('/api/v1/auth/register').send({ ...base, confirmAge: false }).expect(400);
+      expect(noAge.body.message).toBe(RULES);
+
+      await http.post('/api/v1/auth/register').send(base).expect(201);
+      const stored = await prisma.user.findUnique({ where: { email: base.email } });
+      expect(stored?.acceptedRulesAt).toBeInstanceOf(Date);
+      expect(stored?.ageConfirmedAt).toBeInstanceOf(Date);
+    });
+
+    it('accept-rules: older accounts can accept; needs login and both boxes ticked', async () => {
+      const { user, cookie } = await loginAs();
+      await prisma.user.update({
+        where: { email: user.email },
+        data: { acceptedRulesAt: null, ageConfirmedAt: null },
+      });
+
+      const before = await http.get('/api/v1/auth/me').set('Cookie', cookie).expect(200);
+      expect(before.body.acceptedRulesAt).toBeNull();
+
+      await http.post('/api/v1/auth/accept-rules').send({ acceptRules: true, confirmAge: true }).expect(401);
+      const bad = await http
+        .post('/api/v1/auth/accept-rules')
+        .set('Cookie', cookie)
+        .send({ acceptRules: true, confirmAge: false })
+        .expect(400);
+      expect(bad.body.message).toMatch(/18 or older/);
+
+      const ok = await http
+        .post('/api/v1/auth/accept-rules')
+        .set('Cookie', cookie)
+        .send({ acceptRules: true, confirmAge: true })
+        .expect(200);
+      expect(ok.body.acceptedRulesAt).toEqual(expect.any(String));
+      expect(ok.body.ageConfirmedAt).toEqual(expect.any(String));
+      expect(ok.body).not.toHaveProperty('password');
+    });
   });
 
   /* ──────────────────── Socket.IO: matchmaking, signaling, chat ──────────────────── */
@@ -178,6 +225,13 @@ describe('Debate API (e2e)', () => {
           resolve(data);
         });
       });
+
+    // Sockets left waiting by an earlier test would be matched with the next
+    // test's users, so every test starts with a clean matchmaking queue.
+    beforeEach(async () => {
+      sockets.splice(0).forEach((s) => s.disconnect());
+      await new Promise((r) => setTimeout(r, 150));
+    });
 
     it('rejects sockets without a valid login cookie', async () => {
       await expect(connect()).rejects.toThrow('Not authenticated');
@@ -265,6 +319,109 @@ describe('Debate API (e2e)', () => {
       const w2 = once(tab2, 'waiting'); // still waiting, not matched with tab1
       tab2.emit('find-partner');
       await w2;
+    });
+
+    it('find-partner is refused until the rules are accepted', async () => {
+      const { user, cookie } = await loginAs();
+      await prisma.user.update({
+        where: { email: user.email },
+        data: { acceptedRulesAt: null, ageConfirmedAt: null },
+      });
+      const socket = await connect(cookie);
+
+      const refused = once(socket, 'rules-required');
+      socket.emit('find-partner');
+      await refused;
+
+      await http
+        .post('/api/v1/auth/accept-rules')
+        .set('Cookie', cookie)
+        .send({ acceptRules: true, confirmAge: true })
+        .expect(200);
+
+      const waiting = once(socket, 'waiting');
+      socket.emit('find-partner');
+      await waiting;
+    });
+
+    /** Matches two fresh users and returns both sockets. */
+    async function matchedPair() {
+      const [u1, u2] = [await loginAs(), await loginAs()];
+      const a = await connect(u1.cookie);
+      const b = await connect(u2.cookie);
+      const waiting = once(a, 'waiting');
+      a.emit('find-partner');
+      await waiting;
+      const matchedA = once(a, 'matched');
+      const matchedB = once(b, 'matched');
+      b.emit('find-partner');
+      await Promise.all([matchedA, matchedB]);
+      return { u1, u2, a, b };
+    }
+
+    it('report-partner stores a report (also after the partner left)', async () => {
+      const { u1, u2, a, b } = await matchedPair();
+      const idOf = async (email: string) => (await prisma.user.findUniqueOrThrow({ where: { email } })).id;
+      const [aId, bId] = [await idOf(u1.user.email), await idOf(u2.user.email)];
+
+      const bad = await a.emitWithAck('report-partner', { reason: 'NOT_A_REASON' });
+      expect(bad).toEqual({ ok: false, message: 'Please choose a reason.' });
+
+      const ok = await a.emitWithAck('report-partner', { reason: 'HARASSMENT', details: '  was rude  ' });
+      expect(ok).toEqual({ ok: true });
+      const stored = await prisma.report.findFirstOrThrow({ where: { reporterId: aId, reportedUserId: bId } });
+      expect(stored).toMatchObject({ reason: 'HARASSMENT', details: 'was rude', status: 'OPEN' });
+
+      // partner leaves: the report button still works for the debate that just ended
+      const left = once(a, 'peer-left');
+      b.disconnect();
+      await left;
+      expect(await a.emitWithAck('report-partner', { reason: 'SPAM' })).toEqual({ ok: true });
+      expect(await prisma.report.count({ where: { reporterId: aId, reportedUserId: bId } })).toBe(2);
+
+      // nobody to report for a user who never had a partner
+      const lonely = await connect((await loginAs()).cookie);
+      expect(await lonely.emitWithAck('report-partner', { reason: 'SPAM' })).toEqual({
+        ok: false,
+        message: 'There is nobody to report.',
+      });
+    });
+
+    it('block-partner ends the debate and the two are never matched again', async () => {
+      const { u1, u2, a, b } = await matchedPair();
+
+      const left = once(b, 'peer-left');
+      expect(await a.emitWithAck('block-partner')).toEqual({ ok: true });
+      await left; // the blocked user sees an ordinary "partner left"
+
+      const [aUser, bUser] = await Promise.all([
+        prisma.user.findUniqueOrThrow({ where: { email: u1.user.email } }),
+        prisma.user.findUniqueOrThrow({ where: { email: u2.user.email } }),
+      ]);
+      expect(await prisma.block.count({ where: { blockerId: aUser.id, blockedId: bUser.id } })).toBe(1);
+
+      // both search again: they must NOT be matched with each other
+      const waitingA = once(a, 'waiting');
+      a.emit('find-partner');
+      await waitingA;
+      const waitingB = once(b, 'waiting');
+      b.emit('find-partner');
+      await waitingB;
+
+      // a third user is matched with the longest-waiting one (a), and b keeps waiting
+      const c = await connect((await loginAs()).cookie);
+      const matchedA = once<{ initiator: boolean }>(a, 'matched');
+      const matchedC = once(c, 'matched');
+      c.emit('find-partner');
+      expect((await matchedA).initiator).toBe(true);
+      await matchedC;
+
+      // blocking a user that was never a partner is refused
+      const stranger = await connect((await loginAs()).cookie);
+      expect(await stranger.emitWithAck('block-partner')).toEqual({
+        ok: false,
+        message: 'There is nobody to block.',
+      });
     });
   });
 });

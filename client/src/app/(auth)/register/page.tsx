@@ -66,6 +66,7 @@ export default function SignUpPage() {
   const [form, setForm] = useState(INITIAL);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [consent, setConsent] = useState({ acceptRules: false, confirmAge: false });
   const router = useRouter();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -76,7 +77,7 @@ export default function SignUpPage() {
 
     try {
       setLoading(true);
-      const res = await api.post('/auth/register', form);
+      const res = await api.post('/auth/register', { ...form, ...consent });
       if (res.status === 200 || res.status === 201) {
         toast.success('Account created successfully!');
         router.push('/login');
@@ -249,6 +250,44 @@ export default function SignUpPage() {
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+              </div>
+
+              {/* Rules + age confirmation (also enforced by the API) */}
+              <div className="flex flex-col gap-3 pt-1">
+                <label className="flex cursor-pointer items-start gap-3 text-sm text-white/60">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={consent.acceptRules}
+                    onChange={(e) =>
+                      setConsent((p) => ({ ...p, acceptRules: e.target.checked }))
+                    }
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                  <span>
+                    I have read and agree to the{' '}
+                    <Link
+                      href="/rules"
+                      target="_blank"
+                      className="text-primary hover:underline"
+                    >
+                      Code of Conduct
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 text-sm text-white/60">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={consent.confirmAge}
+                    onChange={(e) =>
+                      setConsent((p) => ({ ...p, confirmAge: e.target.checked }))
+                    }
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                  <span>I confirm that I am 18 years old or older.</span>
+                </label>
               </div>
 
               {/* Submit */}

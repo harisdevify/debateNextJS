@@ -1,8 +1,18 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  Equals,
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Trim } from '../../common/trim.decorator';
 
 export const REQUIRED_MESSAGE = 'All fields are required!';
+export const RULES_MESSAGE =
+  'You must accept the rules and confirm you are 18 or older!';
 
 export class RegisterDto {
   @Trim()
@@ -44,4 +54,12 @@ export class RegisterDto {
   @MinLength(8, { message: 'Password must be at least 8 characters!' })
   @MaxLength(128, { message: 'Password is too long!' })
   password!: string;
+
+  @IsBoolean({ message: RULES_MESSAGE })
+  @Equals(true, { message: RULES_MESSAGE })
+  acceptRules!: boolean;
+
+  @IsBoolean({ message: RULES_MESSAGE })
+  @Equals(true, { message: RULES_MESSAGE })
+  confirmAge!: boolean;
 }

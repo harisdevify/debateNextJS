@@ -15,6 +15,7 @@ import {
   AuthenticatedUser,
   CurrentUser,
 } from './decorators/current-user.decorator';
+import { AcceptRulesDto } from './dto/accept-rules.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -64,6 +65,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.me(user.id);
+  }
+
+  @Post('accept-rules')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  acceptRules(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AcceptRulesDto
+  ) {
+    return this.authService.acceptRules(user.id, dto);
   }
 
   @Patch('me')

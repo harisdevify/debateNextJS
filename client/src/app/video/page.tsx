@@ -1,18 +1,23 @@
 'use client';
+import { BlockDialog } from '@/components/debate/BlockDialog';
+import { ReportDialog } from '@/components/debate/ReportDialog';
 import { useAuth } from '@/hooks/useAuth';
 import type { ChatMessage, DebateStatus } from '@/types';
 import {
+  Flag,
   MessageCircle,
   Mic,
   MicOff,
   PhoneOff,
   Send,
+  UserX,
   Video,
   VideoOff,
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useDebateRoom } from '../../hooks/useDebateRoom';
 
 const PLACEHOLDER = 'var(--background)';
@@ -22,6 +27,7 @@ const STATUS_TEXT: Record<Exclude<DebateStatus, 'connected'>, string> = {
   starting: 'Starting your camera…',
   searching: 'Looking for a debate partner…',
   'peer-left': 'Your partner left the debate.',
+  blocked: 'You blocked this user. You will not be matched with each other again.',
   error: 'Could not start. Check camera access and refresh.',
 };
 
@@ -114,6 +120,8 @@ function DebateRoom() {
     messages: msgs,
     sendMessage,
     findNext,
+    reportPartner,
+    blockPartner,
     toggleMic,
     toggleCamera,
   } = useDebateRoom(localRef, remoteRef);
@@ -122,6 +130,8 @@ function DebateRoom() {
   const [camOn, setCamOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
+  const [reportOpen, setReportOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
   const [readCount, setReadCount] = useState(0);
   const unread = chatOpen
     ? 0
@@ -176,12 +186,20 @@ function DebateRoom() {
                 {status !== 'connected' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-center">
                     <p className="text-sm text-white/70">{STATUS_TEXT[status]}</p>
-                    {status === 'peer-left' && (
+                    {(status === 'peer-left' || status === 'blocked') && (
                       <button
                         onClick={handleNext}
                         className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover"
                       >
                         Find next partner
+                      </button>
+                    )}
+                    {status === 'peer-left' && (
+                      <button
+                        onClick={() => setReportOpen(true)}
+                        className="pressable text-xs text-white/40 underline-offset-4 transition-colors hover:text-white/70 hover:underline"
+                      >
+                        Report this user
                       </button>
                     )}
                   </div>
@@ -196,12 +214,30 @@ function DebateRoom() {
                 </span>
 
                 {status === 'connected' && (
-                  <button
-                    onClick={handleNext}
-                    className="pressable absolute top-3 right-3 rounded-full border border-white/10 bg-[rgba(7,9,14,0.55)] px-3 py-1 text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
-                  >
-                    Next
-                  </button>
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <button
+                      onClick={() => setReportOpen(true)}
+                      aria-label="Report this user"
+                      title="Report"
+                      className="pressable flex size-7 items-center justify-center rounded-full border border-white/10 bg-background/60 text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                    >
+                      <Flag size={13} />
+                    </button>
+                    <button
+                      onClick={() => setBlockOpen(true)}
+                      aria-label="Block this user"
+                      title="Block"
+                      className="pressable flex size-7 items-center justify-center rounded-full border border-white/10 bg-background/60 text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                    >
+                      <UserX size={13} />
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="pressable rounded-full border border-white/10 bg-background/60 px-3 py-1 text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                    >
+                      Next
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -387,6 +423,17 @@ function DebateRoom() {
           <ChatInputRow onSend={handleSend} />
         </div>
       </div>
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        onSubmit={reportPartner}
+      />
+      <BlockDialog
+        open={blockOpen}
+        name={peerName}
+        onClose={() => setBlockOpen(false)}
+        onConfirm={blockPartner}
+      />
     </>
   );
 }
@@ -397,10 +444,19 @@ export default function VideoPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-  }, [loading, user, router]);
+  const accepted = !!user?.acceptedRulesAt && !!user?.ageConfirmedAt;
 
-  if (loading || !user) return null;
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace('/login');
+    } else if (!accepted) {
+      // accounts created before the rules existed accept them first
+      toast.info('Please accept the rules to join a debate.');
+      router.replace('/rules');
+    }
+  }, [loading, user, accepted, router]);
+
+  if (loading || !user || !accepted) return null;
   return <DebateRoom />;
 }

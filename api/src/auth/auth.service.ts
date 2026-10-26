@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { AcceptRulesDto } from './dto/accept-rules.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -18,6 +19,8 @@ const publicUserSelect = {
   gender: true,
   education: true,
   country: true,
+  acceptedRulesAt: true,
+  ageConfirmedAt: true,
 } as const;
 
 function isPrismaError(error: unknown, code: string): boolean {
@@ -42,8 +45,19 @@ export class AuthService {
     const password = await bcrypt.hash(dto.password, 10);
 
     try {
+      // the DTO guarantees acceptRules and confirmAge are true
+      const now = new Date();
       await this.prisma.user.create({
-        data: { fullname, email, gender, education, country, password },
+        data: {
+          fullname,
+          email,
+          gender,
+          education,
+          country,
+          password,
+          acceptedRulesAt: now,
+          ageConfirmedAt: now,
+        },
       });
 
       return { message: 'Account created successfully!' };
@@ -82,6 +96,8 @@ export class AuthService {
         gender: user.gender,
         education: user.education,
         country: user.country,
+        acceptedRulesAt: user.acceptedRulesAt,
+        ageConfirmedAt: user.ageConfirmedAt,
       },
     };
   }
@@ -97,6 +113,25 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /** For accounts created before the rules existed (or any future rules update). */
+  async acceptRules(userId: number, _dto: AcceptRulesDto) {
+    const now = new Date();
+    try {
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: { acceptedRulesAt: now, ageConfirmedAt: now },
+        select: publicUserSelect,
+      });
+    } catch (error) {
+      if (isPrismaError(error, 'P2025')) {
+        throw new UnauthorizedException('User not found!');
+      }
+
+      console.error('Accept rules error:', error);
+      throw new InternalServerErrorException('Something went wrong!');
+    }
   }
 
   async updateMe(userId: number, dto: UpdateProfileDto) {

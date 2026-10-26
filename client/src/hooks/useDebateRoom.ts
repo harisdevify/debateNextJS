@@ -19,11 +19,16 @@ const ICE_SERVERS = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
+interface AckResponse {
+  ok: boolean;
+  message?: string;
+}
+
 /**
  * One socket for everything in the debate room:
  * matchmaking + WebRTC signaling + chat.
  *
- * status: 'starting' | 'searching' | 'connected' | 'peer-left' | 'error'
+ * status: 'starting' | 'searching' | 'connected' | 'peer-left' | 'blocked' | 'error'
  */
 export function useDebateRoom(
   localVideoRef: RefObject<HTMLVideoElement | null>,
@@ -152,6 +157,17 @@ export function useDebateRoom(
       }
     });
 
+    // the server double-checks the rules, even though the page already does
+    socket.on('rules-required', () => {
+      setStatus('error');
+      toast.error('Please accept the rules first.');
+    });
+
+    socket.on('search-error', () => {
+      setStatus('error');
+      toast.error('Could not look for a partner. Please try again.');
+    });
+
     socket.on('peer-left', () => {
       closePeer();
       setStatus('peer-left');
@@ -204,6 +220,48 @@ export function useDebateRoom(
     socketRef.current?.emit('find-partner');
   }, [closePeer]);
 
+  /** Emit an event and wait for the server's { ok, message } answer. */
+  const emitWithAck = useCallback(
+    async (event: string, payload?: unknown): Promise<AckResponse> => {
+      const socket = socketRef.current;
+      if (!socket?.connected) return { ok: false, message: 'You are not connected.' };
+      try {
+        return (await socket
+          .timeout(5000)
+          .emitWithAck(event, ...(payload === undefined ? [] : [payload]))) as AckResponse;
+      } catch {
+        return { ok: false, message: 'The server did not answer. Please try again.' };
+      }
+    },
+    []
+  );
+
+  /** Report the latest partner (also works right after they left). */
+  const reportPartner = useCallback(
+    async (reason: string, details: string) => {
+      const res = await emitWithAck('report-partner', { reason, details });
+      if (res.ok) toast.success('Report sent. Thank you for keeping the platform safe.');
+      else toast.error(res.message ?? 'Could not send the report.');
+      return res.ok;
+    },
+    [emitWithAck]
+  );
+
+  /** Block the current partner: the debate ends and you are never matched again. */
+  const blockPartner = useCallback(async () => {
+    const res = await emitWithAck('block-partner');
+    if (!res.ok) {
+      toast.error(res.message ?? 'Could not block this user.');
+      return false;
+    }
+    closePeer();
+    setMessages([]);
+    setPeerName('');
+    setStatus('blocked');
+    toast.success('User blocked.');
+    return true;
+  }, [emitWithAck, closePeer]);
+
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -243,6 +301,8 @@ export function useDebateRoom(
     messages,
     sendMessage,
     findNext,
+    reportPartner,
+    blockPartner,
     toggleMic,
     toggleCamera,
   };
