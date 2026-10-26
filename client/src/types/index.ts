@@ -10,6 +10,9 @@ export interface User {
   country: string;
   /** Avatar data URL, kept in the browser until the API stores it. */
   avatar?: string;
+  /** null until the user accepted the rules / confirmed they are 18+ */
+  acceptedRulesAt: string | null;
+  ageConfirmedAt: string | null;
 }
 
 /** Fields the profile form can change (PATCH /auth/me). */
@@ -30,6 +33,7 @@ export type DebateStatus =
   | 'searching'
   | 'connected'
   | 'peer-left'
+  | 'blocked'
   | 'error';
 
 export interface ChatMessage {

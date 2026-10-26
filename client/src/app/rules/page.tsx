@@ -1,6 +1,5 @@
 'use client';
 import {
-  ArrowRight,
   Ban,
   BookOpen,
   Gavel,
@@ -10,7 +9,7 @@ import {
   Video,
   VolumeX,
 } from 'lucide-react';
-import Link from 'next/link';
+import { AgreeToRules } from '@/components/rules/AgreeToRules';
 
 const rules = [
   {
@@ -141,31 +140,8 @@ export default function RulesPage() {
             ))}
           </ol>
 
-          {/* Agreement box */}
-          <div
-            className="mt-10 p-6 rounded-2xl border border-[rgba(0,191,166,0.2)]
-                          bg-[rgba(0,191,166,0.04)] text-center"
-          >
-            <p className="text-white/50 text-sm mb-5 leading-relaxed">
-              By clicking below, you confirm that you have read, understood, and
-              agree to abide by the Code of Conduct during all debates.
-            </p>
-            <Link
-              href="/video"
-              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-xl
-                         bg-primary text-[#0a0a0a] font-bold text-[1rem]
-                         shadow-[0_0_0_0_rgba(0,191,166,0.4)]
-                         transition-all duration-300
-                         hover:shadow-[0_0_28px_rgba(0,191,166,0.4)]
-                         hover:bg-[#00d4b8] hover:-translate-y-0.5"
-            >
-              I Agree &amp; Join Debate
-              <ArrowRight
-                size={17}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              />
-            </Link>
-          </div>
+          {/* Agreement box (login-aware) */}
+          <AgreeToRules />
         </div>
       </section>
     </div>

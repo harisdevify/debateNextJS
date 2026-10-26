@@ -7,6 +7,19 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ReportReason {
+  HARASSMENT
+  ABUSIVE_LANGUAGE
+  INAPPROPRIATE_CONTENT
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   fullname  String   @db.VarChar(100)
@@ -17,5 +30,46 @@ model User {
   password  String   @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
+  // set when the user accepted the rules / confirmed they are 18+
+  acceptedRulesAt DateTime? @map("accepted_rules_at") @db.Timestamp(0)
+  ageConfirmedAt  DateTime? @map("age_confirmed_at") @db.Timestamp(0)
+
+  reportsMade    Report[] @relation("ReportReporter")
+  reportsAgainst Report[] @relation("ReportReported")
+  blocksMade     Block[]  @relation("Blocker")
+  blocksReceived Block[]  @relation("Blocked")
+
   @@map("debate_users")
+}
+
+// Reports are only stored for now; review and strikes/bans come later.
+model Report {
+  id             Int          @id @default(autoincrement())
+  reporterId     Int          @map("reporter_id")
+  reportedUserId Int          @map("reported_user_id")
+  reason         ReportReason
+  details        String?      @db.VarChar(500)
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp(0)
+
+  reporter     User @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@index([reportedUserId])
+  @@index([status, createdAt])
+  @@map("reports")
+}
+
+// A user never gets matched with someone they blocked (or who blocked them).
+model Block {
+  blockerId Int      @map("blocker_id")
+  blockedId Int      @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
 }

@@ -91,7 +91,11 @@ The existing API client defaults to `http://localhost:8800/api/v1`; Socket.IO de
 - `POST /api/v1/auth/logout` — clears the auth cookie.
 - `GET /api/v1/auth/me` — returns the current user's public fields.
 - `PATCH /api/v1/auth/me` — updates fullname, gender, education and country.
-- Socket.IO events remain `find-partner`, `waiting`, `matched`, `offer`, `answer`, `ice-candidate`, `chatMessage`, `leave`, and `peer-left`.
+- `POST /api/v1/auth/accept-rules` — accepts the Code of Conduct and confirms 18+ (`{ acceptRules: true, confirmAge: true }`). Registration requires the same two flags.
+- Socket.IO events: `find-partner`, `waiting`, `matched`, `offer`, `answer`, `ice-candidate`, `chatMessage`, `leave`, `peer-left`.
+  - `find-partner` is refused with `rules-required` until the rules are accepted.
+  - `report-partner` (`{ reason, details? }`, with ack) stores a report about the latest partner. Reports are only saved for now; review, strikes and bans come later.
+  - `block-partner` (with ack) blocks the latest partner, ends the debate, and the two are never matched again.
 
 ## Environment variables
 
