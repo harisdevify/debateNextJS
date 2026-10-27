@@ -104,6 +104,17 @@ export function useDebateRoom(
       closePeer();
       setStatus("reconnecting");
     });
+    socket.on("account-restricted", ({ message }: { message: string }) => {
+      searching = true;
+      socket.removeAllListeners('disconnect');
+      closePeer();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setStatus('error');
+      toast.error(message);
+      socket.disconnect();
+    });
+    socket.on("moderation-warning", ({ message }: { message: string }) => toast.warning(message));
     socket.on("waiting", () => setStatus("searching"));
     socket.on(
       "matched",

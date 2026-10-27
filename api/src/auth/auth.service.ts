@@ -1,3 +1,4 @@
+import { assertActive } from '../access/account-access.service';
 import {
   ConflictException,
   Injectable,
@@ -13,6 +14,7 @@ import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const publicUserSelect = {
+  role: true,
   id: true,
   fullname: true,
   email: true,
@@ -85,20 +87,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password!');
     }
 
+    assertActive(user);
     const accessToken = await this.jwtService.signAsync({ id: user.id });
 
     return {
       accessToken,
-      user: {
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email,
-        gender: user.gender,
-        education: user.education,
-        country: user.country,
-        acceptedRulesAt: user.acceptedRulesAt,
-        ageConfirmedAt: user.ageConfirmedAt,
-      },
+      user: await this.me(user.id),
     };
   }
 
@@ -112,7 +106,10 @@ export class AuthService {
       throw new UnauthorizedException('User not found!');
     }
 
-    return user;
+    const warning = await this.prisma.moderationAction.findFirst({
+      where: { targetId: userId, kind: 'WARN' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], select: { createdAt: true },
+    });
+    return { ...user, lastWarningAt: warning?.createdAt ?? null };
   }
 
   /** For accounts created before the rules existed (or any future rules update). */

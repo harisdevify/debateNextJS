@@ -17,7 +17,8 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json --runInBand",
+    "test:unit": "prisma generate && jest --config ./test/jest-unit.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

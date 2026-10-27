@@ -55,6 +55,7 @@ export default function Header() {
      }`;
 
   const navLinks = [
+    ...(user?.role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
     { href: '/', label: 'Home' },
     { href: '/rules', label: 'Rules' },
     ...(user
@@ -118,6 +119,7 @@ export default function Header() {
         </div>
       </header>
 
+      {user?.lastWarningAt && <div role="status" className="border-b border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center text-sm text-foreground">You have a conduct warning dated {new Date(user.lastWarningAt).toLocaleDateString()}. <Link href="/rules" className="font-semibold underline">Review debate rules</Link>.</div>}
       {/* ── Mobile Sidebar ── */}
 
       {/* Backdrop */}
