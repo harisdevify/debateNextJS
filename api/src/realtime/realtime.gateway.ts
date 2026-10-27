@@ -1,3 +1,4 @@
+import { AccountAccessService } from '../access/account-access.service';
 import { randomUUID } from "node:crypto";
 import { RateLimitService } from "../common/rate-limit.service";
 import { ConfigService } from "@nestjs/config";
@@ -78,9 +79,23 @@ export class RealtimeGateway
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly limits: RateLimitService,
+    private readonly access: AccountAccessService,
   ) {}
 
+  private readonly onModerated = ({ userId, kind }: { userId: number; kind: string }) => {
+    for (const raw of this.server.sockets.sockets.values()) {
+      const socket = raw as DebateSocket;
+      if (socket.data.user?.id !== userId) continue;
+      if (kind === 'WARN') socket.emit('moderation-warning', { message: 'You received a conduct warning. Please review the debate rules.' });
+      if (kind === 'BAN' || kind === 'SUSPEND') {
+        socket.emit('account-restricted', { message: 'Your account access has been restricted.' });
+        socket.disconnect(true);
+      }
+    }
+  };
+  onModuleDestroy() { this.access.events.off('moderated', this.onModerated); }
   afterInit(server: Server) {
+    this.access.events.on('moderated', this.onModerated);
     server.use(async (rawSocket, next) => {
       const socket = rawSocket as DebateSocket;
       try {
@@ -99,6 +114,7 @@ export class RealtimeGateway
           select: { id: true, fullname: true },
         });
         if (!user) return next(new Error("Not authenticated"));
+        await this.access.requireActive(user.id);
         socket.data.user = user;
         socket.data.peerId = null;
         socket.data.lastPeerUserId = null;
@@ -110,6 +126,13 @@ export class RealtimeGateway
   }
 
   handleConnection(client: DebateSocket) {
+    // Old JWTs and reconnects cannot bypass account restrictions.
+    client.use((_packet, next) => {
+      void this.access.requireActive(client.data.user!.id).then(() => next()).catch(() => {
+        client.emit('account-restricted', { message: 'Your account cannot participate right now.' });
+        client.disconnect(true);
+      });
+    });
     client.on("find-partner", () => void this.findPartner(client));
     client.on(
       "report-partner",

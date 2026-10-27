@@ -20,7 +20,31 @@ enum ReportStatus {
   REVIEWED
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum ModerationKind {
+  DISMISS
+  WARN
+  SUSPEND
+  BAN
+  RESTORE
+}
+
 model User {
+  role UserRole @default(USER)
+  status AccountStatus @default(ACTIVE)
+  suspendedUntil DateTime? @map("suspended_until") @db.Timestamptz()
+  moderationReceived ModerationAction[] @relation("ModerationTarget")
+  moderationPerformed ModerationAction[] @relation("ModerationActor")
   id        Int      @id @default(autoincrement())
   fullname  String   @db.VarChar(100)
   email     String   @unique @db.VarChar(150)
@@ -44,6 +68,7 @@ model User {
 
 // Reports are only stored for now; review and strikes/bans come later.
 model Report {
+  moderationActions ModerationAction[]
   id             Int          @id @default(autoincrement())
   reporterId     Int          @map("reporter_id")
   reportedUserId Int          @map("reported_user_id")
@@ -81,4 +106,22 @@ model RateLimit {
   expiresAt DateTime @map("expires_at") @db.Timestamptz()
   @@index([expiresAt])
   @@map("rate_limits")
+}
+
+model ModerationAction {
+  id Int @id @default(autoincrement())
+  actorId Int @map("actor_id")
+  targetId Int @map("target_id")
+  reportId Int? @map("report_id")
+  kind ModerationKind
+  reason String @db.VarChar(1000)
+  suspendedUntil DateTime? @map("suspended_until") @db.Timestamptz()
+  previousStatus AccountStatus @map("previous_status")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  actor User @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+  target User @relation("ModerationTarget", fields: [targetId], references: [id], onDelete: Restrict)
+  report Report? @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  @@index([targetId, createdAt])
+  @@index([reportId])
+  @@map("moderation_actions")
 }

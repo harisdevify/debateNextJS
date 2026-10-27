@@ -1,3 +1,5 @@
+import { AccountAccessModule } from './access/account-access.module';
+import { AdminModule } from './admin/admin.module';
 import { RateLimitModule } from './common/rate-limit.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -12,6 +14,8 @@ import { RealtimeModule } from './realtime/realtime.module';
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,
     RateLimitModule,
+    AccountAccessModule,
+    AdminModule,
     AuthModule,
     RealtimeModule,
   ],

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/admin-moderation
       - migration/nestjs-prisma-postgresql
   pull_request:
 
@@ -40,6 +41,7 @@ jobs:
       - run: npx prisma migrate deploy
       - run: npm run build
       - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run test:e2e
 
   frontend:

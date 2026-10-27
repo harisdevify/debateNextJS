@@ -3,6 +3,8 @@
 /** Public user object returned by the API (never contains the password). */
 export interface User {
   id: number;
+  role: 'USER' | 'ADMIN';
+  lastWarningAt?: string | null;
   fullname: string;
   email: string;
   gender: string;

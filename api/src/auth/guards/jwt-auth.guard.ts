@@ -1,3 +1,4 @@
+import { AccountAccessService } from '../../access/account-access.service';
 import {
   CanActivate,
   ExecutionContext,
@@ -14,7 +15,7 @@ type AuthenticatedRequest = Request & { user?: { id: number } };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService, private readonly access: AccountAccessService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -25,9 +26,11 @@ export class JwtAuthGuard implements CanActivate {
       if (!Number.isInteger(payload.id))
         throw new Error('Invalid token subject');
       request.user = { id: payload.id };
-      return true;
+
     } catch {
       throw new UnauthorizedException('Not authenticated');
     }
+    await this.access.requireActive(request.user!.id);
+    return true;
   }
 }
