@@ -19,6 +19,13 @@ export function validateEnv(config: Record<string, unknown>) {
     errors.push('PORT must be a number');
   }
 
+  const turnUrls = String(config.TURN_URLS ?? '').trim();
+  const turnSecret = String(config.TURN_SECRET ?? '').trim();
+  if (!!turnUrls !== !!turnSecret) errors.push('TURN_URLS and TURN_SECRET must be configured together');
+  if (turnUrls && turnUrls.split(',').some((url) => !/^turns?:[^\s]+$/.test(url.trim()))) {
+    errors.push('TURN_URLS must contain comma-separated turn: or turns: URLs');
+  }
+
   if (errors.length) {
     throw new Error(
       `Invalid environment configuration:\n- ${errors.join('\n- ')}`

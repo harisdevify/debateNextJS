@@ -1,188 +1,237 @@
-'use client';
-import { createSocket } from '@/lib/socket';
-import type {
-  ChatMessage,
-  DebateStatus,
-  MatchedPayload,
-} from '@/types';
+"use client";
+import api from "@/lib/api";
+import { createSocket } from "@/lib/socket";
+import type { ChatMessage, DebateStatus, MatchedPayload } from "@/types";
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
   type RefObject,
-} from 'react';
-import type { Socket } from 'socket.io-client';
-import { toast } from 'sonner';
-
-const ICE_SERVERS = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-};
-
-interface AckResponse {
+} from "react";
+import type { Socket } from "socket.io-client";
+import { toast } from "sonner";
+interface Ack {
   ok: boolean;
   message?: string;
 }
-
-/**
- * One socket for everything in the debate room:
- * matchmaking + WebRTC signaling + chat.
- *
- * status: 'starting' | 'searching' | 'connected' | 'peer-left' | 'blocked' | 'error'
- */
+interface Signal<T> {
+  matchId: string;
+  data: T;
+}
 export function useDebateRoom(
   localVideoRef: RefObject<HTMLVideoElement | null>,
-  remoteVideoRef: RefObject<HTMLVideoElement | null>
+  remoteVideoRef: RefObject<HTMLVideoElement | null>,
 ) {
   const socketRef = useRef<Socket | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
-  // candidates that arrived before the SDP
-  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
-
-  const [status, setStatus] = useState<DebateStatus>('starting');
-  const [peerName, setPeerName] = useState('');
+  const matchRef = useRef<string | null>(null);
+  const iceRef = useRef<RTCIceCandidateInit[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const configRef = useRef<RTCConfiguration>({ iceServers: [] });
+  const searchRef = useRef(0);
+  const [status, setStatus] = useState<DebateStatus>("starting");
+  const [peerName, setPeerName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  /* ── helpers ── */
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
   const closePeer = useCallback(() => {
-    peerRef.current?.close();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    const pc = peerRef.current;
     peerRef.current = null;
-    pendingIceRef.current = [];
+    matchRef.current = null;
+    if (pc) {
+      pc.onconnectionstatechange = null;
+      pc.ontrack = null;
+      pc.onicecandidate = null;
+      pc.close();
+    }
+    iceRef.current = [];
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, [remoteVideoRef]);
-
-  const createPeer = useCallback(() => {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
-
-    const local = localStreamRef.current;
-    local?.getTracks().forEach((t) => pc.addTrack(t, local));
-
-    pc.ontrack = (e) => {
-      if (remoteVideoRef.current)
-        remoteVideoRef.current.srcObject = e.streams[0];
-    };
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) socketRef.current?.emit('ice-candidate', e.candidate);
-    };
-
-    peerRef.current = pc;
-    return pc;
-  }, [remoteVideoRef]);
-
-  /* ── init ── */
   useEffect(() => {
     const socket = createSocket();
     socketRef.current = socket;
     let cancelled = false;
-
-    const flushIce = async (pc: RTCPeerConnection) => {
-      const queued = pendingIceRef.current;
-      pendingIceRef.current = [];
+    let searching = false;
+    const active = (pc: RTCPeerConnection, id: string) =>
+      !cancelled && peerRef.current === pc && matchRef.current === id;
+    const fail = (pc: RTCPeerConnection, message: string) => {
+      if (cancelled || peerRef.current !== pc) return;
+      socket.emit("leave");
+      closePeer();
+      setStatus("error");
+      toast.error(message);
+    };
+    const timeout = (pc: RTCPeerConnection, ms: number) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(
+        () => fail(pc, "Video connection timed out. Try another partner."),
+        ms,
+      );
+    };
+    const flushIce = async (pc: RTCPeerConnection, id: string) => {
+      const queued = iceRef.current;
+      iceRef.current = [];
       for (const candidate of queued) {
-        try {
-          await pc.addIceCandidate(candidate);
-        } catch (err) {
-          console.error('ICE error:', err);
-        }
+        if (!active(pc, id)) return;
+        await pc.addIceCandidate(candidate);
       }
     };
-
-    // we only ask for a partner once the camera is ready AND the socket is up
-    const startSearching = () => {
-      if (localStreamRef.current && socket.connected) {
-        socket.emit('find-partner');
+    const start = () => {
+      if (!cancelled && !searching && streamRef.current && socket.connected) {
+        searching = true;
+        setStatus("searching");
+        socket.emit("find-partner");
       }
     };
-
-    socket.on('connect', startSearching);
-
-    socket.on('connect_error', (err: Error) => {
-      setStatus('error');
+    socket.on("connect", start);
+    socket.on("connect_error", (err: Error) => {
+      if (cancelled) return;
+      setStatus("error");
       toast.error(
-        err.message === 'Not authenticated'
-          ? 'Please login again.'
-          : 'Cannot reach the debate server.'
+        err.message === "Not authenticated"
+          ? "Please login again."
+          : "Cannot reach the debate server.",
       );
     });
-
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
+      if (cancelled) return;
+      searchRef.current++;
+      searching = false;
       closePeer();
-      setStatus('searching'); // socket.io reconnects, then 'connect' re-searches
+      setStatus("reconnecting");
     });
-
-    socket.on('waiting', () => setStatus('searching'));
-
-    socket.on('matched', async ({ initiator, peer }: MatchedPayload) => {
+    socket.on("waiting", () => setStatus("searching"));
+    socket.on(
+      "matched",
+      async ({ matchId, initiator, peer }: MatchedPayload) => {
+        if (cancelled) return;
+        closePeer();
+        matchRef.current = matchId;
+        setMessages([]);
+        setPeerName(peer?.fullname || "");
+        setStatus("connecting");
+        const pc = new RTCPeerConnection(configRef.current);
+        peerRef.current = pc;
+        const local = streamRef.current;
+        local?.getTracks().forEach((track) => pc.addTrack(track, local));
+        pc.ontrack = (event) => {
+          if (active(pc, matchId) && remoteVideoRef.current)
+            remoteVideoRef.current.srcObject = event.streams[0];
+        };
+        pc.onicecandidate = (event) => {
+          if (active(pc, matchId) && event.candidate)
+            socket.emit("ice-candidate", { matchId, data: event.candidate });
+        };
+        pc.onconnectionstatechange = () => {
+          if (!active(pc, matchId)) return;
+          if (pc.connectionState === "connected") {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            timerRef.current = null;
+            setStatus("connected");
+          } else if (pc.connectionState === "disconnected") {
+            setStatus("reconnecting");
+            timeout(pc, 10_000);
+          } else if (pc.connectionState === "failed")
+            fail(
+              pc,
+              "Video connection failed. Try another partner or check your network.",
+            );
+        };
+        timeout(pc, 30_000);
+        try {
+          if (initiator) {
+            const offer = await pc.createOffer();
+            if (!active(pc, matchId)) return;
+            await pc.setLocalDescription(offer);
+            if (active(pc, matchId))
+              socket.emit("offer", { matchId, data: offer });
+          }
+        } catch {
+          fail(pc, "Could not start the video connection.");
+        }
+      },
+    );
+    socket.on(
+      "offer",
+      async ({ matchId, data }: Signal<RTCSessionDescriptionInit>) => {
+        const pc = peerRef.current;
+        if (!pc || !active(pc, matchId)) return;
+        try {
+          await pc.setRemoteDescription(data);
+          if (!active(pc, matchId)) return;
+          await flushIce(pc, matchId);
+          if (!active(pc, matchId)) return;
+          const answer = await pc.createAnswer();
+          if (!active(pc, matchId)) return;
+          await pc.setLocalDescription(answer);
+          if (active(pc, matchId))
+            socket.emit("answer", { matchId, data: answer });
+        } catch {
+          fail(pc, "Could not negotiate the video connection.");
+        }
+      },
+    );
+    socket.on(
+      "answer",
+      async ({ matchId, data }: Signal<RTCSessionDescriptionInit>) => {
+        const pc = peerRef.current;
+        if (!pc || !active(pc, matchId)) return;
+        try {
+          await pc.setRemoteDescription(data);
+          if (active(pc, matchId)) await flushIce(pc, matchId);
+        } catch {
+          fail(pc, "Could not negotiate the video connection.");
+        }
+      },
+    );
+    socket.on(
+      "ice-candidate",
+      async ({ matchId, data }: Signal<RTCIceCandidateInit>) => {
+        const pc = peerRef.current;
+        if (!pc || !active(pc, matchId)) return;
+        if (!pc.remoteDescription) {
+          if (iceRef.current.length < 256) iceRef.current.push(data);
+          return;
+        }
+        try {
+          await pc.addIceCandidate(data);
+        } catch {
+          fail(pc, "Could not establish the video connection.");
+        }
+      },
+    );
+    socket.on("rules-required", () => {
+      setStatus("error");
+      toast.error("Please accept the rules first.");
+    });
+    socket.on("search-error", () => {
+      setStatus("error");
+      toast.error("Could not search. Wait a few seconds and try again.");
+    });
+    socket.on("peer-left", () => {
       closePeer();
-      setMessages([]);
-      setPeerName(peer?.fullname || '');
-      setStatus('connected');
-
-      const pc = createPeer();
-      if (initiator) {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('offer', offer);
-      }
+      setStatus("peer-left");
+      toast.info("Your partner left the debate.");
     });
-
-    socket.on('offer', async (offer: RTCSessionDescriptionInit) => {
-      const pc = peerRef.current ?? createPeer();
-      await pc.setRemoteDescription(offer);
-      await flushIce(pc);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer', answer);
-    });
-
-    socket.on('answer', async (answer: RTCSessionDescriptionInit) => {
-      const pc = peerRef.current;
-      if (!pc) return;
-      await pc.setRemoteDescription(answer);
-      await flushIce(pc);
-    });
-
-    socket.on('ice-candidate', async (candidate: RTCIceCandidateInit) => {
-      const pc = peerRef.current;
-      if (!pc || !pc.remoteDescription) {
-        pendingIceRef.current.push(candidate);
-        return;
-      }
+    socket.on(
+      "chatMessage",
+      ({ text, matchId }: { text: string; matchId: string }) => {
+        if (matchId === matchRef.current)
+          setMessages((prev) => [
+            ...prev.slice(-499),
+            { id: crypto.randomUUID(), text, sender: "other" },
+          ]);
+      },
+    );
+    void (async () => {
       try {
-        await pc.addIceCandidate(candidate);
-      } catch (err) {
-        console.error('ICE error:', err);
-      }
-    });
-
-    // the server double-checks the rules, even though the page already does
-    socket.on('rules-required', () => {
-      setStatus('error');
-      toast.error('Please accept the rules first.');
-    });
-
-    socket.on('search-error', () => {
-      setStatus('error');
-      toast.error('Could not look for a partner. Please try again.');
-    });
-
-    socket.on('peer-left', () => {
-      closePeer();
-      setStatus('peer-left');
-      toast.info('Your partner left the debate.');
-    });
-
-    socket.on('chatMessage', ({ text }: { text: string }) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: `${Date.now()}-${prev.length}`, text, sender: 'other' },
-      ]);
-    });
-
-    (async () => {
-      try {
+        const config = await api.get<RTCConfiguration>("/auth/ice-servers");
+        if (cancelled) return;
+        configRef.current = config.data;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
@@ -191,110 +240,146 @@ export function useDebateRoom(
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
-        localStreamRef.current = stream;
+        streamRef.current = stream;
+        setMicOn(true);
+        setCamOn(true);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-        startSearching();
+        start();
       } catch {
         if (!cancelled) {
-          setStatus('error');
-          toast.error('Please enable camera & microphone.');
+          setStatus("error");
+          toast.error(
+            "Could not start. Check your session, camera and microphone permissions.",
+          );
         }
       }
     })();
-
     return () => {
       cancelled = true;
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       closePeer();
-      socket.disconnect(); // server tells the partner via 'peer-left'
+      socket.removeAllListeners();
+      socket.disconnect();
+      socketRef.current = null;
     };
-  }, [createPeer, closePeer, localVideoRef]);
-
-  /* ── actions ── */
-  const findNext = useCallback(() => {
+  }, [closePeer, localVideoRef, remoteVideoRef]);
+  const findNext = useCallback(async () => {
+    const socket = socketRef.current;
+    if (!socket?.connected || !streamRef.current) {
+      toast.error(
+        "Check your connection and camera permissions, then refresh.",
+      );
+      return;
+    }
+    const version = ++searchRef.current;
+    socket.emit("leave");
     closePeer();
     setMessages([]);
-    setPeerName('');
-    setStatus('searching');
-    socketRef.current?.emit('find-partner');
+    setPeerName("");
+    setStatus("starting");
+    try {
+      const config = await api.get<RTCConfiguration>("/auth/ice-servers");
+      if (
+        socketRef.current !== socket ||
+        !socket.connected ||
+        version !== searchRef.current
+      )
+        return;
+      configRef.current = config.data;
+      setStatus("searching");
+      socket.emit("find-partner");
+    } catch {
+      if (version === searchRef.current) setStatus("error");
+    }
   }, [closePeer]);
-
-  /** Emit an event and wait for the server's { ok, message } answer. */
   const emitWithAck = useCallback(
-    async (event: string, payload?: unknown): Promise<AckResponse> => {
+    async (event: string, payload?: unknown): Promise<Ack> => {
       const socket = socketRef.current;
-      if (!socket?.connected) return { ok: false, message: 'You are not connected.' };
+      if (!socket?.connected)
+        return { ok: false, message: "You are not connected." };
       try {
         return (await socket
           .timeout(5000)
-          .emitWithAck(event, ...(payload === undefined ? [] : [payload]))) as AckResponse;
+          .emitWithAck(
+            event,
+            ...(payload === undefined ? [] : [payload]),
+          )) as Ack;
       } catch {
-        return { ok: false, message: 'The server did not answer. Please try again.' };
+        return {
+          ok: false,
+          message:
+            "The server did not answer. Delivery is unconfirmed; check before retrying.",
+        };
       }
     },
-    []
+    [],
   );
-
-  /** Report the latest partner (also works right after they left). */
   const reportPartner = useCallback(
     async (reason: string, details: string) => {
-      const res = await emitWithAck('report-partner', { reason, details });
-      if (res.ok) toast.success('Report sent. Thank you for keeping the platform safe.');
-      else toast.error(res.message ?? 'Could not send the report.');
+      const res = await emitWithAck("report-partner", { reason, details });
+      if (res.ok)
+        toast.success("Report sent. Thank you for keeping the platform safe.");
+      else toast.error(res.message ?? "Could not send the report.");
       return res.ok;
     },
-    [emitWithAck]
+    [emitWithAck],
   );
-
-  /** Block the current partner: the debate ends and you are never matched again. */
   const blockPartner = useCallback(async () => {
-    const res = await emitWithAck('block-partner');
+    const res = await emitWithAck("block-partner");
     if (!res.ok) {
-      toast.error(res.message ?? 'Could not block this user.');
+      toast.error(res.message ?? "Could not block this user.");
       return false;
     }
+    searchRef.current++;
     closePeer();
     setMessages([]);
-    setPeerName('');
-    setStatus('blocked');
-    toast.success('User blocked.');
+    setPeerName("");
+    setStatus("blocked");
+    toast.success("User blocked.");
     return true;
   }, [emitWithAck, closePeer]);
-
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return false;
-      if (status !== 'connected') {
-        toast.info('Wait until a partner joins to chat.');
+      if (trimmed.length > 1000) {
+        toast.error("Use at most 1000 characters.");
         return false;
       }
-
-      socketRef.current?.emit('chatMessage', trimmed);
-      setMessages((prev) => [
-        ...prev,
-        { id: `${Date.now()}-${prev.length}`, text: trimmed, sender: 'me' },
-      ]);
+      const matchId = matchRef.current;
+      if (status !== "connected" || !matchId) {
+        toast.info("Wait until a partner connects to chat.");
+        return false;
+      }
+      const res = await emitWithAck("chatMessage", { text: trimmed, matchId });
+      if (!res.ok) {
+        toast.error(res.message ?? "Could not send your message.");
+        return false;
+      }
+      if (matchRef.current === matchId)
+        setMessages((prev) => [
+          ...prev.slice(-499),
+          { id: crypto.randomUUID(), text: trimmed, sender: "me" },
+        ]);
       return true;
     },
-    [status]
+    [status, emitWithAck],
   );
-
   const toggleMic = () => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    toast.info(track.enabled ? 'Mic Unmuted' : 'Mic Muted');
+    const track = streamRef.current?.getAudioTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setMicOn(track.enabled);
+    }
   };
-
   const toggleCamera = () => {
-    const track = localStreamRef.current?.getVideoTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    toast.info(track.enabled ? 'Camera On' : 'Camera Off');
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setCamOn(track.enabled);
+    }
   };
-
   return {
     status,
     peerName,
@@ -305,5 +390,7 @@ export function useDebateRoom(
     blockPartner,
     toggleMic,
     toggleCamera,
+    micOn,
+    camOn,
   };
 }

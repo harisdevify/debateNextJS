@@ -1,3 +1,4 @@
+import { RateLimitModule } from './common/rate-limit.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +11,7 @@ import { RealtimeModule } from './realtime/realtime.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,
+    RateLimitModule,
     AuthModule,
     RealtimeModule,
   ],
