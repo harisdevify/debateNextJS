@@ -31,6 +31,8 @@ export interface LoginCredentials {
 export type DebateStatus =
   | 'starting'
   | 'searching'
+  | 'connecting'
+  | 'reconnecting'
   | 'connected'
   | 'peer-left'
   | 'blocked'
@@ -50,6 +52,7 @@ export interface ApiErrorBody {
 
 /** Socket.IO events (server -> client) used by the debate room. */
 export interface MatchedPayload {
+  matchId: string;
   initiator: boolean;
   peer?: { fullname?: string };
 }

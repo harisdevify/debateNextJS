@@ -34,11 +34,11 @@ const OVERRIDE_FIELDS = ['avatar'] as const;
 
 type Overrides = Partial<Pick<User, (typeof OVERRIDE_FIELDS)[number]>>;
 
-const readOverrides = (): Overrides => {
+const readOverrides = (userId: number): Overrides => {
   if (typeof window === 'undefined') return {};
   try {
     const stored = JSON.parse(
-      localStorage.getItem(OVERRIDES_KEY) ?? '{}'
+      localStorage.getItem(`${OVERRIDES_KEY}:${userId}`) ?? '{}'
     ) as Overrides;
     // ignore anything else an older version may have saved
     const result: Overrides = {};
@@ -101,20 +101,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = useCallback(() => !!user, [user]);
 
   const getUser = useCallback(
-    () => (user ? { ...user, ...readOverrides() } : null),
+    () => (user ? { ...user, ...readOverrides(user.id) } : null),
     [user]
   );
 
   const saveUser = useCallback((data: Partial<User>) => {
+    if (!user) return;
     const next: Overrides = {};
     for (const key of OVERRIDE_FIELDS) {
       if (data[key] !== undefined) next[key] = data[key];
     }
     localStorage.setItem(
-      OVERRIDES_KEY,
-      JSON.stringify({ ...readOverrides(), ...next })
+      `${OVERRIDES_KEY}:${user.id}`,
+      JSON.stringify({ ...readOverrides(user.id), ...next })
     );
-  }, []);
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

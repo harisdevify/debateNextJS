@@ -1,3 +1,4 @@
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -16,7 +17,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [AuthService, JwtAuthGuard, AuthRateLimitGuard],
   exports: [JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}

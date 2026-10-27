@@ -1,3 +1,6 @@
+import { createHmac } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import {
   Body,
   Controller,
@@ -23,7 +26,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService, private readonly config: ConfigService) {}
 
   private cookieOptions() {
     const production = process.env.NODE_ENV === 'production';
@@ -34,12 +37,14 @@ export class AuthController {
     };
   }
 
+  @UseGuards(AuthRateLimitGuard)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  @UseGuards(AuthRateLimitGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -59,6 +64,22 @@ export class AuthController {
   logout(@Res({ passthrough: true }) response: Response) {
     response.clearCookie('accessToken', this.cookieOptions());
     return { message: 'Logged out successfully!' };
+  }
+
+  @Get('ice-servers')
+  @UseGuards(JwtAuthGuard)
+  iceServers(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    const urls = this.config.get<string>('TURN_URLS')?.split(',').map((url) => url.trim()).filter(Boolean);
+    const secret = this.config.get<string>('TURN_SECRET');
+    const iceServers: Array<{ urls: string | string[]; username?: string; credential?: string }> = [
+      { urls: 'stun:stun.l.google.com:19302' },
+    ];
+    if (urls?.length && secret) {
+      const username = `${Math.floor(Date.now() / 1000) + 3600}:${user.id}`;
+      iceServers.push({ urls, username, credential: createHmac('sha1', secret).update(username).digest('base64') });
+    }
+    return { iceServers };
   }
 
   @Get('me')

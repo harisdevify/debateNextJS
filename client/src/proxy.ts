@@ -1,25 +1,10 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-// Next.js 16: `middleware` was renamed to `proxy`.
-// Fast gate only (is the cookie present?). The API verifies the JWT for real
-// and the pages redirect if /auth/me says the session is invalid.
-// NOTE: the cookie is set by the API, so this works when client and API share
-// a domain (localhost in dev). On separate domains the in-page gates still apply.
-const PROTECTED = ['/profile', '/video'];
-
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
-
-  if (isProtected && !request.cookies.has('accessToken')) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
+// The API owns the httpOnly cookie and verifies it on every protected request.
+// On separate hosts that cookie is intentionally absent from Next requests.
+// /profile and /video wait for AuthProvider's /auth/me before mounting content.
+export function proxy() {
   return NextResponse.next();
 }
 
-export const config = {
-  matcher: ['/profile/:path*', '/video/:path*'],
-};
+export const config = { matcher: ['/profile/:path*', '/video/:path*'] };

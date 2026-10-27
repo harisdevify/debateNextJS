@@ -1,4 +1,5 @@
 'use client';
+import { ChatInputRow } from '@/components/debate/ChatInputRow';
 import { BlockDialog } from '@/components/debate/BlockDialog';
 import { ReportDialog } from '@/components/debate/ReportDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +10,6 @@ import {
   Mic,
   MicOff,
   PhoneOff,
-  Send,
   UserX,
   Video,
   VideoOff,
@@ -25,6 +25,8 @@ const PLACEHOLDER = 'var(--background)';
 // What to show on top of the remote video until a partner is connected
 const STATUS_TEXT: Record<Exclude<DebateStatus, 'connected'>, string> = {
   starting: 'Starting your camera…',
+  connecting: 'Connecting video…',
+  reconnecting: 'Connection interrupted. Reconnecting…',
   searching: 'Looking for a debate partner…',
   'peer-left': 'Your partner left the debate.',
   blocked: 'You blocked this user. You will not be matched with each other again.',
@@ -66,49 +68,6 @@ function ChatBody({ msgs }: { msgs: ChatMessage[] }) {
 }
 
 /* ── Chat Input ────────────────────────────── */
-function ChatInputRow({ onSend }: { onSend?: (text: string) => void }) {
-  const [val, setVal] = useState('');
-  const send = () => {
-    if (!val.trim()) return;
-    onSend?.(val.trim());
-    setVal('');
-  };
-  return (
-    <div className="flex items-end gap-2.5 px-3 pb-4 pt-2.5 border-t border-white/7 bg-[#0f1219] shrink-0">
-      <textarea
-        className="flex-1 px-3.5 py-2.5 rounded-[22px] bg-white/5 border border-white/8
-          text-[#dde2ee] text-sm leading-snug outline-none resize-none
-          min-h-[75px] max-h-[150px] placeholder:text-white/35
-          transition-all duration-200
-          focus:bg-white/8 focus:border-[rgba(0,229,192,0.38)] focus:shadow-[0_0_0_3px_rgba(0,229,192,0.07)]"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            send();
-          }
-        }}
-        placeholder="Message…"
-        rows={1}
-      />
-      <button
-        onClick={send}
-        aria-label="Send"
-        className="w-[42px] h-[42px] rounded-full border-none cursor-pointer shrink-0
-          bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
-          shadow-[0_4px_14px_rgba(0,229,192,0.28)]
-          flex items-center justify-center
-          transition-all duration-200
-          hover:scale-110 hover:shadow-[0_6px_22px_rgba(0,229,192,0.45)]
-          active:scale-90"
-      >
-        <Send size={15} color="#fff" />
-      </button>
-    </div>
-  );
-}
-
 /* ── Main Page ─────────────────────────────── */
 function DebateRoom() {
   const localRef = useRef(null);
@@ -124,10 +83,10 @@ function DebateRoom() {
     blockPartner,
     toggleMic,
     toggleCamera,
+    micOn,
+    camOn,
   } = useDebateRoom(localRef, remoteRef);
 
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
@@ -136,6 +95,13 @@ function DebateRoom() {
   const unread = chatOpen
     ? 0
     : msgs.slice(readCount).filter((m) => m.sender === 'other').length;
+
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const closeOnDesktop = () => { if (wide.matches) setChatOpen(false); };
+    wide.addEventListener('change', closeOnDesktop);
+    return () => wide.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   const openChat = () => {
     setChatOpen(true);
@@ -186,7 +152,7 @@ function DebateRoom() {
                 {status !== 'connected' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-center">
                     <p className="text-sm text-white/70">{STATUS_TEXT[status]}</p>
-                    {(status === 'peer-left' || status === 'blocked') && (
+                    {(status === 'peer-left' || status === 'blocked' || status === 'error') && (
                       <button
                         onClick={handleNext}
                         className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover"
@@ -272,7 +238,7 @@ function DebateRoom() {
               <button
                 onClick={() => {
                   toggleMic();
-                  setMicOn((v) => !v);
+
                 }}
                 title={micOn ? 'Mute' : 'Unmute'}
                 className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
@@ -297,7 +263,7 @@ function DebateRoom() {
               <button
                 onClick={() => {
                   toggleCamera();
-                  setCamOn((v) => !v);
+
                 }}
                 title={camOn ? 'Camera off' : 'Camera on'}
                 className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
@@ -379,13 +345,15 @@ function DebateRoom() {
         {/* ── MOBILE BACKDROP ── */}
         <div
           onClick={closeChat}
-          className={`md:hidden fixed inset-0 z-[90] bg-[rgba(7,9,14,0.72)] backdrop-blur-[8px]
+          className={`lg:hidden fixed inset-0 z-[90] bg-[rgba(7,9,14,0.72)] backdrop-blur-[8px]
             transition-opacity duration-300
             ${chatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         />
 
         {/* ── MOBILE DRAWER ── */}
         <div
+          inert={!chatOpen}
+          aria-hidden={!chatOpen}
           className={`lg:hidden fixed bottom-0 left-0 right-0 z-[100]
             flex flex-col h-[68svh]
             bg-[#0f1219] rounded-t-[26px]

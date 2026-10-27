@@ -55,6 +55,7 @@ model Report {
   reporter     User @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedUser User @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
 
+  @@index([reporterId, createdAt])
   @@index([reportedUserId])
   @@index([status, createdAt])
   @@map("reports")
@@ -72,4 +73,12 @@ model Block {
   @@id([blockerId, blockedId])
   @@index([blockedId])
   @@map("blocks")
+}
+
+model RateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz()
+  @@index([expiresAt])
+  @@map("rate_limits")
 }
