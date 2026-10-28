@@ -13,17 +13,24 @@ A respectful discussion platform with live video (WebRTC), real-time chat (Socke
 
 ## Repository layout
 
-```
+```text
 api/
-  prisma/                 # PostgreSQL schema and SQL migration
+  prisma/                 # Schema and SQL migrations
+  scripts/                # Database operator scripts
   src/
-    auth/                 # Register, login, logout, profile, JWT guard and DTOs
-    prisma/               # Shared Prisma service
-    realtime/              # Socket.IO auth, matchmaking, signaling and chat
-    app.module.ts
-    main.ts
-client/                   # Existing Next.js frontend; UI files intentionally preserved
+    common/               # Shared decorators and rate-limit module
+    config/               # Environment validation
+    modules/              # access, admin, auth, health, realtime
+    prisma/               # Explicitly imported database module
+    app.module.ts         # Application composition
+    app.setup.ts          # HTTP security, CORS and validation
+    main.ts               # Bootstrap
+  test/                   # Unit and PostgreSQL integration tests
+client/                   # Next.js frontend
 ```
+
+See [backend architecture](docs/backend-architecture.md) and
+[contribution rules](CONTRIBUTING.md) before adding a feature.
 
 ## Requirements
 
@@ -62,7 +69,7 @@ The Prisma client is generated code and is **not** committed: `npm run dev`, `np
 
 #### Tests
 
-With the database running and migrated:
+With a dedicated disposable test database running and migrated (never use production or personal data):
 
 ```bash
 cd api
@@ -96,7 +103,7 @@ The existing API client defaults to `http://localhost:8800/api/v1`; Socket.IO de
 - Socket.IO events: `find-partner`, `waiting`, `matched`, `offer`, `answer`, `ice-candidate`, `chatMessage`, `leave`, `peer-left`.
   - `matched` includes `matchId`; signaling uses `{ matchId, data }`, and chat sends `{ matchId, text }` with an acknowledgement.
   - `find-partner` is refused with `rules-required` until the rules are accepted.
-  - `report-partner` (`{ reason, details? }`, with ack) stores a report about the latest partner. Reports are only saved for now; review, strikes and bans come later.
+  - `report-partner` (`{ reason, details? }`, with ack) stores a report about the latest partner. Admins can review reports, warn, suspend, ban and restore accounts; see [moderation guide](docs/admin-moderation.md).
   - `block-partner` (with ack) blocks the latest partner, ends the debate, and the two are never matched again.
 
 ## Environment variables
@@ -194,3 +201,4 @@ is **not** guaranteed. This change does not provision a relay server.
 6. With a configured TURN service, test two restrictive/different networks and
    inspect WebRTC stats for a relay candidate. A local mock test is not evidence
    that the deployed relay, microphone, or camera works on real devices.
+

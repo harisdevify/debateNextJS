@@ -5,11 +5,11 @@ import {
   AccountAccessService,
   assertActive,
   effectiveStatus,
-} from '../src/access/account-access.service';
-import { AdminGuard } from '../src/admin/admin.guard';
-import { AdminService } from '../src/admin/admin.service';
+} from '../src/modules/access/account-access.service';
+import { AdminGuard } from '../src/modules/admin/guards/admin.guard';
+import { AdminService } from '../src/modules/admin/admin.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { JwtAuthGuard } from '../src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../src/modules/auth/guards/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 
 describe('moderation rules', () => {
@@ -181,3 +181,4 @@ describe('moderation rules', () => {
     ).rejects.toThrow('duration');
   });
 });
+
