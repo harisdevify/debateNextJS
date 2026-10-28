@@ -7,8 +7,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { LOGIN_REQUIRED_MESSAGE } from './auth/dto/login.dto';
-import { REQUIRED_MESSAGE } from './auth/dto/register.dto';
+import { LOGIN_REQUIRED_MESSAGE } from './modules/auth/dto/login.dto';
+import { REQUIRED_MESSAGE } from './modules/auth/dto/register.dto';
 
 // Messages that should win when several fields fail at once.
 const PRIORITY_MESSAGES = [REQUIRED_MESSAGE, LOGIN_REQUIRED_MESSAGE];
@@ -45,3 +45,4 @@ export function configureApp(app: INestApplication) {
     })
   );
 }
+

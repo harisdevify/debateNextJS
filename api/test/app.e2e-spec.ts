@@ -5,7 +5,7 @@ import { io, type Socket } from "socket.io-client";
 import request from "supertest";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
-import { RealtimeGateway } from "../src/realtime/realtime.gateway";
+import { RealtimeGateway } from "../src/modules/realtime/realtime.gateway";
 import { PrismaService } from "../src/prisma/prisma.service";
 
 const RUN = `e2e${Date.now()}`;
@@ -687,3 +687,4 @@ describe("Debate API (e2e)", () => {
     });
   });
 });
+

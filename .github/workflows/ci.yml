@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/admin-moderation
+      - refactor/backend-team-structure
       - migration/nestjs-prisma-postgresql
   pull_request:
 
@@ -61,3 +62,4 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+
