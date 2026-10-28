@@ -1,4 +1,3 @@
-import { assertActive } from '../access/account-access.service';
 import {
   ConflictException,
   Injectable,
@@ -8,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
+import { assertActive } from '../access/account-access.service';
 import { AcceptRulesDto } from './dto/accept-rules.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -107,7 +107,9 @@ export class AuthService {
     }
 
     const warning = await this.prisma.moderationAction.findFirst({
-      where: { targetId: userId, kind: 'WARN' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], select: { createdAt: true },
+      where: { targetId: userId, kind: 'WARN' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { createdAt: true },
     });
     return { ...user, lastWarningAt: warning?.createdAt ?? null };
   }
@@ -154,4 +156,3 @@ export class AuthService {
     }
   }
 }
-

@@ -39,4 +39,3 @@ export class AccountAccessService {
     return user;
   }
 }
-

@@ -5,12 +5,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   AccountAccessService,
   assertActive,
   effectiveStatus,
 } from '../access/account-access.service';
-import { PrismaService } from '../../prisma/prisma.service';
 import { AdminListDto, ModerateDto } from './dto/admin.dto';
 const userSelect = {
   id: true,
@@ -227,4 +227,3 @@ export class AdminService {
     return { ok: true, actionId: result.id };
   }
 }
-
