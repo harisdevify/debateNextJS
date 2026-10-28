@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { createHash } from "node:crypto";
-import { PrismaService } from "../../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /** Atomic fixed-window quotas shared across API processes and socket reconnects. */
 @Injectable()
@@ -12,9 +12,9 @@ export class RateLimitService {
     scope: string,
     identity: string,
     limit: number,
-    windowMs: number,
+    windowMs: number
   ) {
-    const key = `${scope}:${createHash("sha256").update(identity).digest("hex")}`;
+    const key = `${scope}:${createHash('sha256').update(identity).digest('hex')}`;
     const rows = await this.prisma.$queryRaw<Array<{ count: number }>>`
       INSERT INTO "rate_limits" ("key", "count", "expires_at")
       VALUES (${key}, 1, NOW() + ${windowMs} * INTERVAL '1 millisecond')
@@ -31,10 +31,9 @@ export class RateLimitService {
         .$executeRaw`DELETE FROM "rate_limits" WHERE "expires_at" < NOW()`.catch(
         () => {
           this.nextCleanup = 0;
-        },
+        }
       );
     }
     return rows[0].count <= limit;
   }
 }
-

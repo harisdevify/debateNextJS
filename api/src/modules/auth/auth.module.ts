@@ -1,12 +1,12 @@
-import { PrismaModule } from '../../prisma/prisma.module';
-import { AccountAccessModule } from '../access/account-access.module';
-import { RateLimitModule } from '../../common/rate-limit/rate-limit.module';
-import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { RateLimitModule } from '../../common/rate-limit/rate-limit.module';
+import { PrismaModule } from '../../prisma/prisma.module';
+import { AccountAccessModule } from '../access/account-access.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
@@ -27,4 +27,3 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   exports: [JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}
-

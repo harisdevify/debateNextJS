@@ -27,4 +27,3 @@ export class UpdateProfileDto {
   @MaxLength(100, { message: 'Country is too long!' })
   country!: string;
 }
-

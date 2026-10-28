@@ -8,14 +8,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
-  CurrentUser,
   AuthenticatedUser,
+  CurrentUser,
 } from '../auth/decorators/current-user.decorator';
-import { AdminGuard } from './guards/admin.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminService } from './admin.service';
 import { AdminListDto, ModerateDto } from './dto/admin.dto';
+import { AdminGuard } from './guards/admin.guard';
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
@@ -47,4 +47,3 @@ export class AdminController {
     return this.admin.moderate(actor.id, body, { targetId: id });
   }
 }
-

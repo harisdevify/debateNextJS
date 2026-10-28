@@ -1,6 +1,3 @@
-import { createHmac } from 'node:crypto';
-import { ConfigService } from '@nestjs/config';
-import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import {
   Body,
   Controller,
@@ -12,7 +9,9 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
+import { createHmac } from 'node:crypto';
 import { AuthService } from './auth.service';
 import {
   AuthenticatedUser,
@@ -22,11 +21,15 @@ import { AcceptRulesDto } from './dto/accept-rules.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private readonly config: ConfigService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService
+  ) {}
 
   private cookieOptions() {
     const production = process.env.NODE_ENV === 'production';
@@ -68,16 +71,31 @@ export class AuthController {
 
   @Get('ice-servers')
   @UseGuards(JwtAuthGuard)
-  iceServers(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) response: Response) {
+  iceServers(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response
+  ) {
     response.setHeader('Cache-Control', 'no-store');
-    const urls = this.config.get<string>('TURN_URLS')?.split(',').map((url) => url.trim()).filter(Boolean);
+    const urls = this.config
+      .get<string>('TURN_URLS')
+      ?.split(',')
+      .map((url) => url.trim())
+      .filter(Boolean);
     const secret = this.config.get<string>('TURN_SECRET');
-    const iceServers: Array<{ urls: string | string[]; username?: string; credential?: string }> = [
-      { urls: 'stun:stun.l.google.com:19302' },
-    ];
+    const iceServers: Array<{
+      urls: string | string[];
+      username?: string;
+      credential?: string;
+    }> = [{ urls: 'stun:stun.l.google.com:19302' }];
     if (urls?.length && secret) {
       const username = `${Math.floor(Date.now() / 1000) + 3600}:${user.id}`;
-      iceServers.push({ urls, username, credential: createHmac('sha1', secret).update(username).digest('base64') });
+      iceServers.push({
+        urls,
+        username,
+        credential: createHmac('sha1', secret)
+          .update(username)
+          .digest('base64'),
+      });
     }
     return { iceServers };
   }
@@ -107,4 +125,3 @@ export class AuthController {
     return this.authService.updateMe(user.id, dto);
   }
 }
-
