@@ -2,6 +2,8 @@
 import { ChatInputRow } from '@/components/debate/ChatInputRow';
 import { PageState } from '@/components/ui/PageState';
 import { DebateSetup } from '@/components/debate/DebateSetup';
+import { PreDebateCheck } from '@/components/debate/PreDebateCheck';
+import { MatchSearchStatus } from '@/components/debate/MatchSearchStatus';
 import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
 import type { DebatePreferences } from '@/types';
 import { BlockDialog } from '@/components/debate/BlockDialog';
@@ -32,6 +34,7 @@ const STATUS_TEXT: Record<Exclude<DebateStatus, 'connected'>, string> = {
   connecting: 'Connecting video…',
   reconnecting: 'Connection interrupted. Reconnecting…',
   searching: 'Looking for a debate partner…',
+  idle: 'Search paused. Your camera and microphone are still ready.',
   'peer-left': 'Your partner left the debate.',
   blocked: 'You blocked this user. You will not be matched with each other again.',
   error: 'Could not start. Check camera access and refresh.',
@@ -74,12 +77,16 @@ function ChatBody({ msgs }: { msgs: ChatMessage[] }) {
 
 /* ── Chat Input ────────────────────────────── */
 /* ── Main Page ─────────────────────────────── */
-function DebateRoom({ preferences, onChangePreferences }: { preferences: DebatePreferences; onChangePreferences: () => void }) {
+function DebateRoom({ preferences, initialStream, onChangePreferences }: { preferences: DebatePreferences; initialStream: MediaStream; onChangePreferences: () => void }) {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
   const router = useRouter();
   const {
     status,
+    searchStartedAt,
+    searchConfirmed,
+    cancelSearch,
+    retrySearch,
     peerName,
     messages: msgs,
     sendMessage,
@@ -94,7 +101,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
     maySpeak,
     debateRemainingMs,
     turnRemainingMs,
-  } = useDebateRoom(localRef, remoteRef, preferences);
+  } = useDebateRoom(localRef, remoteRef, preferences, initialStream);
 
   const formatRemaining = (value: number | null) => {
     if (value === null) return '--:--';
@@ -187,13 +194,19 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                 {/* status until a partner is connected */}
                 {status !== 'connected' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-center">
-                    <p className="text-sm text-white/70">{STATUS_TEXT[status]}</p>
+                    {status === 'searching' ? (
+                      <MatchSearchStatus startedAt={searchStartedAt} confirmed={searchConfirmed} onCancel={cancelSearch} onChangePreferences={onChangePreferences} />
+                    ) : <p className="text-sm text-white/70">{STATUS_TEXT[status]}</p>}
+                    {status === 'idle' && <div className="flex flex-wrap justify-center gap-3">
+                      <button type="button" onClick={() => void retrySearch()} className="min-h-11 rounded-xl bg-primary px-5 text-sm font-bold text-background">Resume searching</button>
+                      <button type="button" onClick={onChangePreferences} className="min-h-11 rounded-xl border border-white/20 px-4 text-sm text-white">Change preferences</button>
+                    </div>}
                     {(status === 'peer-left' || status === 'blocked' || status === 'error') && (
                       <button
                         onClick={handleNext}
                         className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover"
                       >
-                        Find next partner
+                        Retry search
                       </button>
                     )}
                     {status === 'peer-left' && (
@@ -477,13 +490,21 @@ export default function VideoPage() {
 }
 
 function AuthenticatedDebate() {
-  const [preferences, setPreferences] = useState<DebatePreferences | null>(null);
-  const [lastPreferences, setLastPreferences] = useState<DebatePreferences>(DEFAULT_DEBATE_PREFERENCES);
-  if (!preferences) {
-    return <DebateSetup initial={lastPreferences} onStart={(selected) => {
-      setLastPreferences(selected);
-      setPreferences(selected);
-    }} />;
-  }
-  return <DebateRoom preferences={preferences} onChangePreferences={() => setPreferences(null)} />;
+  const [preferences, setPreferences] = useState<DebatePreferences>(DEFAULT_DEBATE_PREFERENCES);
+  const [stage, setStage] = useState<'setup' | 'check' | 'room'>('setup');
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const backToSetup = () => {
+    setStage('setup');
+    setStream(null);
+  };
+  if (stage === 'setup') return <DebateSetup initial={preferences} onStart={(selected) => {
+    setPreferences(selected);
+    setStage('check');
+  }} />;
+  if (stage === 'check') return <PreDebateCheck preferences={preferences} onBack={backToSetup} onJoin={(ready) => {
+    setStream(ready);
+    setStage('room');
+  }} />;
+  if (!stream) return null;
+  return <DebateRoom preferences={preferences} initialStream={stream} onChangePreferences={backToSetup} />;
 }
