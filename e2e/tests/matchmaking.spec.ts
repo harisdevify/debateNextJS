@@ -4,8 +4,8 @@ import { login, openDeviceCheck, registerAccount, startSearching } from './suppo
 test('cancelled queue remains idle, then retry matches a second authenticated participant', async ({ browser, request }) => {
   const firstAccount = await registerAccount(request);
   const secondAccount = await registerAccount(request);
-  const firstContext = await browser.newContext({ permissions: ['camera', 'microphone'] });
-  const secondContext = await browser.newContext({ permissions: ['camera', 'microphone'] });
+  const firstContext = await browser.newContext({ baseURL: 'http://localhost:3000', permissions: ['camera', 'microphone'] });
+  const secondContext = await browser.newContext({ baseURL: 'http://localhost:3000', permissions: ['camera', 'microphone'] });
   const first = await firstContext.newPage();
   const second = await secondContext.newPage();
   try {
