@@ -25,6 +25,10 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
+import { TextField } from '@/components/ui/TextField';
+import { SelectField } from '@/components/ui/SelectField';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { PageState } from '@/components/ui/PageState';
 import type { ProfileFields } from '@/types';
 
 const AVATAR_COLORS = [
@@ -51,9 +55,6 @@ function getInitials(name = '') {
   );
 }
 
-const inputClass = `w-full px-4 py-3 rounded-xl bg-white/[0.05] text-white border border-white/[0.08]
-   placeholder:text-white/25 focus:outline-none focus:border-primary/60
-   focus:bg-white/[0.07] transition-all duration-200`;
 
 function ProfileContent() {
   const { getUser, saveUser, updateProfile } = useAuth();
@@ -78,6 +79,11 @@ function ProfileContent() {
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
+      toast.error('Choose an image smaller than 2 MB.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result;
@@ -128,7 +134,7 @@ function ProfileContent() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 px-4 py-16">
+      <section className="relative flex-1 px-4 py-10 sm:py-16">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -167,7 +173,7 @@ function ProfileContent() {
             />
 
             {/* Avatar + Name row */}
-            <div className="px-7 pb-7">
+            <div className="px-4 pb-6 sm:px-7 sm:pb-7">
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-14">
                 {/* Avatar */}
                 <div className="relative w-fit">
@@ -231,7 +237,7 @@ function ProfileContent() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-2 sm:pb-1">
+                <div className="flex flex-wrap gap-2 sm:pb-1">
                   <button
                     type="button"
                     onClick={() => setEditing((p) => !p)}
@@ -265,7 +271,7 @@ function ProfileContent() {
           </div>
 
           {/* ── BOTTOM GRID: Info + Edit Form ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Info Card */}
             <div className="rounded-2xl border border-white/[0.07] bg-[rgba(10,24,22,0.8)] p-6">
               <h2 className="text-white font-bold text-[1rem] mb-5 flex items-center gap-2">
@@ -325,83 +331,20 @@ function ProfileContent() {
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                    Full Name
-                  </label>
-                  <input
-                    name="fullname"
-                    type="text"
-                    required
-                    value={form.fullname}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    disabled={!editing}
-                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                  />
-                </div>
+                <TextField label="Full Name" name="fullname" type="text" required value={form.fullname} onChange={handleChange} placeholder="Enter your full name" disabled={!editing} />
 
-                <div>
-                  <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                    Gender
-                  </label>
-                  <select
-                    name="gender"
-                    required
-                    value={form.gender}
-                    onChange={handleChange}
-                    disabled={!editing}
-                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                  >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
+                <SelectField label="Gender" name="gender" required value={form.gender} onChange={handleChange} disabled={!editing}>
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </SelectField>
 
-                <div>
-                  <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                    Education
-                  </label>
-                  <input
-                    name="education"
-                    type="text"
-                    required
-                    value={form.education}
-                    onChange={handleChange}
-                    placeholder="e.g. Islamic Studies"
-                    disabled={!editing}
-                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                  />
-                </div>
+                <TextField label="Education" name="education" type="text" required value={form.education} onChange={handleChange} placeholder="e.g. Islamic Studies" disabled={!editing} />
 
-                <div>
-                  <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                    Country
-                  </label>
-                  <input
-                    name="country"
-                    type="text"
-                    required
-                    value={form.country}
-                    onChange={handleChange}
-                    placeholder="Enter your country"
-                    disabled={!editing}
-                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                  />
-                </div>
+                <TextField label="Country" name="country" type="text" required value={form.country} onChange={handleChange} placeholder="Enter your country" disabled={!editing} />
 
                 {editing && (
-                  <button
-                    type="submit"
-                    className="mt-2 flex items-center justify-center gap-2 w-full py-3 rounded-xl
-                               bg-primary text-[#0a0a0a] font-bold text-[0.95rem]
-                               transition-all duration-300
-                               hover:bg-[#00d4b8] hover:shadow-[0_0_24px_rgba(0,191,166,0.4)]"
-                  >
-                    <Save size={16} />
-                    Save Changes
-                  </button>
+                  <PrimaryButton type="submit" className="mt-2"><Save size={16} /> Save Changes</PrimaryButton>
                 )}
               </form>
             </div>
@@ -421,8 +364,8 @@ export default function ProfilePage() {
     if (!loading && !verificationError && !user) router.replace('/login');
   }, [loading, verificationError, user, router]);
 
-  if (loading) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
-  if (verificationError) return <div role="alert" className="mx-auto my-16 max-w-md rounded-2xl border border-amber-300/25 p-6 text-center text-white/80">Could not verify your session. <button onClick={() => void retrySession()} className="font-semibold text-primary underline">Retry connection</button></div>;
+  if (loading) return <PageState title="Checking your session…" />;
+  if (verificationError) return <PageState status="alert" title="Could not verify your session" description="Check your connection, then retry." action={<button onClick={() => void retrySession()} className="min-h-11 rounded-xl bg-primary px-5 text-background">Retry connection</button>} />;
   if (!user) return null;
   // ProfileContent seeds its form from the user on first render
   return <ProfileContent key={user.id} />;

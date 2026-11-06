@@ -1,6 +1,7 @@
 'use client';
 import api from '@/lib/api';
 import { TextField } from '@/components/ui/TextField';
+import { SelectField } from '@/components/ui/SelectField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
   ArrowRight,
@@ -92,11 +93,10 @@ export default function SignUpPage() {
     }
   };
 
-  const inputClass = 'w-full min-h-12 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-white outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25';
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 flex items-center justify-center px-4 py-16">
+      <section className="relative flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -169,7 +169,7 @@ export default function SignUpPage() {
           </div>
 
           {/* ── RIGHT PANEL — FORM ── */}
-          <div className="rounded-3xl border border-white/[0.08] bg-[rgba(10,24,22,0.85)] p-8 backdrop-blur-sm fade-up d-2">
+          <div className="rounded-2xl border border-white/[0.1] bg-[rgba(10,24,22,0.85)] p-5 shadow-xl sm:p-8 backdrop-blur-sm fade-up d-2">
             <div className="mb-7">
               <h3 className="text-white font-black text-[1.5rem]">
                 Create Account
@@ -184,29 +184,11 @@ export default function SignUpPage() {
                 <TextField key={name} label={label} icon={Icon} type={type} name={name} placeholder={placeholder} required value={form[name]} onChange={handleChange} autoComplete={name === 'email' ? 'email' : 'on'} />
               ))}
 
-              {/* Gender */}
-              <div>
-                <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                  Gender
-                </label>
-                <select
-                  name="gender"
-                  required
-                  value={form.gender}
-                  onChange={handleChange}
-                  className={`${inputClass} pl-4`}
-                >
-                  <option value="" className="bg-[#0a0a0a]">
-                    Select gender
-                  </option>
-                  <option value="male" className="bg-[#0a0a0a]">
-                    Male
-                  </option>
-                  <option value="female" className="bg-[#0a0a0a]">
-                    Female
-                  </option>
-                </select>
-              </div>
+              <SelectField label="Gender" name="gender" required value={form.gender} onChange={handleChange}>
+                <option value="">Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </SelectField>
 
               <TextField label="Password" icon={Lock} type={showPass ? 'text' : 'password'} name="password" autoComplete="new-password" placeholder="Create a strong password" required value={form.password} onChange={handleChange}
                 trailing={<button type="button" onClick={() => setShowPass((value) => !value)} aria-label={showPass ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">{showPass ? <EyeOff size={17} /> : <Eye size={17} />}</button>} />

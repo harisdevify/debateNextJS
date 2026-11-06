@@ -84,14 +84,14 @@ export function ReportDialog({ open, onClose, onSubmit }: ReportDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="pressable rounded-full border border-white/10 px-5 py-2 text-sm text-white/70 transition-colors hover:text-white"
+            className="pressable min-h-11 rounded-xl border border-white/10 px-5 py-2 text-sm text-white/70 transition-colors hover:text-white"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!reason || sending}
-            className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="pressable min-h-11 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sending ? 'Sending…' : 'Send report'}
           </button>

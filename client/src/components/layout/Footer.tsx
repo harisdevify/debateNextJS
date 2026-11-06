@@ -1,6 +1,6 @@
 export default function Footer({ developer = 'M Haris' }) {
   return (
-    <footer className="mt-auto text-center py-[10px] bg-[rgba(10,24,22,0.95)] border-t border-[rgba(0,191,166,0.25)] text-[#bbb] text-[0.95rem]">
+    <footer className="mt-auto text-center py-2.5 bg-[rgba(10,24,22,0.95)] border-t border-[rgba(0,191,166,0.25)] text-[#bbb] text-sm">
       <div className="max-container">
         {developer ? (
           <p>

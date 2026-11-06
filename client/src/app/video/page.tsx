@@ -1,5 +1,6 @@
 'use client';
 import { ChatInputRow } from '@/components/debate/ChatInputRow';
+import { PageState } from '@/components/ui/PageState';
 import { DebateSetup } from '@/components/debate/DebateSetup';
 import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
 import type { DebatePreferences } from '@/types';
@@ -110,6 +111,13 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
     : msgs.slice(readCount).filter((m) => m.sender === 'other').length;
 
   useEffect(() => {
+    if (!chatOpen) return;
+    const closeOnEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setChatOpen(false); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [chatOpen]);
+
+  useEffect(() => {
     const wide = window.matchMedia('(min-width: 1024px)');
     const closeOnDesktop = () => { if (wide.matches) setChatOpen(false); };
     wide.addEventListener('change', closeOnDesktop);
@@ -133,17 +141,17 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
   return (
     <>
       {/* PAGE */}
-      <div className="relative flex flex-col h-[calc(100vh-64px)] bg-[#07090e] overflow-hidden font-[DM_Sans,sans-serif]">
+      <div className="relative flex flex-col min-h-[calc(100svh-108px)] bg-[#07090e] lg:h-[calc(100dvh-108px)] lg:overflow-hidden font-[DM_Sans,sans-serif]">
         {/* BODY */}
-        <div className="flex flex-1 overflow-hidden relative z-10">
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
           {/* ── STAGE ── */}
           <section
-            className={`flex-1 flex flex-col gap-3.5 p-4.5 min-w-0 transition-all duration-300
+            className={`flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-3 transition-all duration-300 sm:p-4 lg:gap-3.5
               ${chatOpen ? 'blur-sm brightness-50 pointer-events-none' : ''}`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
-              <span className="truncate">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
-              <button onClick={onChangePreferences} className="shrink-0 font-semibold text-primary hover:underline">Change preferences</button>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
+              <span className="min-w-0 flex-1 truncate">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
+              <button type="button" onClick={onChangePreferences} className="min-h-10 shrink-0 rounded-lg px-2 font-semibold text-primary hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40">Change preferences</button>
             </div>
             {preferences.mode === 'formal' && formalState && status !== 'completed' && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3" role="status" aria-live="off">
@@ -159,19 +167,18 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             )}
             {/* VIDEO GRID */}
             <div
-              className="grid grid-cols-2 gap-3.5 flex-1 min-h-0
-                            max-md:grid-cols-1 max-md:grid-rows-2 max-md:gap-2.5"
+              className="grid min-h-[min(58svh,460px)] min-w-0 flex-1 grid-cols-1 grid-rows-2 gap-2.5 sm:min-h-[420px] sm:grid-cols-2 sm:grid-rows-1 sm:gap-3 lg:min-h-0"
             >
               {/* Remote tile */}
               <div
-                className="relative rounded-[22px] overflow-hidden bg-[#0f1219]
+                className="relative min-h-0 overflow-hidden rounded-2xl bg-[#0f1219]
                               border border-white/7 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
               >
                 <video
                   ref={remoteRef}
                   autoPlay
                   playsInline
-                  className="w-full h-full object-cover block"
+                  className="absolute inset-0 block h-full w-full object-cover"
                   style={{ background: PLACEHOLDER }}
                 />
                 {/* gloss overlay */}
@@ -214,7 +221,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                       onClick={() => setReportOpen(true)}
                       aria-label="Report this user"
                       title="Report"
-                      className="pressable flex size-7 items-center justify-center rounded-full border border-white/10 bg-background/60 text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                      className="pressable flex size-11 items-center justify-center rounded-full border border-white/10 bg-background/70 text-white/75 backdrop-blur-[10px] transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <Flag size={13} />
                     </button>
@@ -222,13 +229,13 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                       onClick={() => setBlockOpen(true)}
                       aria-label="Block this user"
                       title="Block"
-                      className="pressable flex size-7 items-center justify-center rounded-full border border-white/10 bg-background/60 text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                      className="pressable flex size-11 items-center justify-center rounded-full border border-white/10 bg-background/70 text-white/75 backdrop-blur-[10px] transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <UserX size={13} />
                     </button>
                     <button
                       onClick={handleNext}
-                      className="pressable rounded-full border border-white/10 bg-background/60 px-3 py-1 text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-white/65 backdrop-blur-[10px] transition-colors hover:text-primary"
+                      className="pressable min-h-11 rounded-full border border-white/10 bg-background/70 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white/75 backdrop-blur-[10px] transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       Next
                     </button>
@@ -238,7 +245,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
 
               {/* Local tile — teal glow ring */}
               <div
-                className="relative rounded-[22px] overflow-hidden bg-[#0f1219]
+                className="relative min-h-0 overflow-hidden rounded-2xl bg-[#0f1219]
                               border border-white/7
                               shadow-[0_0_0_2px_rgba(0,229,192,0.2),0_12px_40px_rgba(0,0,0,0.55)]"
               >
@@ -247,7 +254,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover block"
+                  className="absolute inset-0 block h-full w-full object-cover"
                   style={{ background: PLACEHOLDER }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" />
@@ -262,7 +269,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             </div>
 
             {/* CONTROLS */}
-            <div className="flex items-center justify-center gap-3 pb-1">
+            <div className="flex flex-wrap items-center justify-center gap-3 pb-2 pt-1">
               {/* Mic */}
               <button
                 onClick={() => {
@@ -276,7 +283,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                   flex items-center justify-center outline-none
                   backdrop-blur-[8px] transition-all duration-200
                   active:scale-[0.87]
-                  max-md:w-[46px] max-md:h-[46px]
+                  min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60
                   ${
                     micOn
                       ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:scale-110 hover:bg-[rgba(0,153,255,0.55)] hover:border-transparent hover:shadow-[0_6px_24px_rgba(0,153,255,0.4)]'
@@ -297,11 +304,12 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
 
                 }}
                 title={camOn ? 'Camera off' : 'Camera on'}
+                aria-label={camOn ? 'Turn camera off' : 'Turn camera on'}
                 className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
                   flex items-center justify-center outline-none
                   backdrop-blur-[8px] transition-all duration-200
                   active:scale-[0.87]
-                  max-md:w-[46px] max-md:h-[46px]
+                  min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60
                   ${
                     camOn
                       ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:scale-110 hover:bg-[rgba(0,153,255,0.55)] hover:border-transparent hover:shadow-[0_6px_24px_rgba(0,153,255,0.4)]'
@@ -319,13 +327,14 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
               <button
                 onClick={() => router.push('/')}
                 title="End Call"
+                aria-label="End debate"
                 className="relative w-[58px] h-[58px] rounded-full border-none cursor-pointer
                   flex items-center justify-center outline-none
                   bg-[#ff3b5c] shadow-[0_4px_22px_rgba(255,59,92,0.45)]
                   transition-all duration-200
                   hover:scale-110 hover:bg-[#ff1a3a] hover:shadow-[0_8px_30px_rgba(255,59,92,0.6)]
                   active:scale-[0.87]
-                  max-md:w-[52px] max-md:h-[52px]"
+                  min-w-12 min-h-12 focus-visible:ring-2 focus-visible:ring-white/70"
               >
                 <PhoneOff size={21} color="#fff" className="rotate-[135deg]" />
               </button>
@@ -334,6 +343,9 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
               <button
                 onClick={openChat}
                 title="Chat"
+                aria-label={unread > 0 ? `Open chat, ${unread} unread messages` : 'Open chat'}
+                aria-haspopup="dialog"
+                aria-expanded={chatOpen}
                 className="relative lg:hidden w-[52px] h-[52px] rounded-full border-none cursor-pointer
                   flex items-center justify-center outline-none
                   bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
@@ -341,7 +353,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                   transition-all duration-200
                   hover:scale-110 hover:shadow-[0_8px_30px_rgba(0,229,192,0.48)]
                   active:scale-[0.87]
-                  max-md:w-[46px] max-md:h-[46px]"
+                  min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60"
               >
                 <MessageCircle size={19} color="#fff" />
                 {unread > 0 && (
@@ -360,7 +372,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
           </section>
 
           {/* ── DESKTOP CHAT ASIDE (hidden on mobile) ── */}
-          <aside className="hidden lg:flex flex-col w-[300px] min-w-[250px] shrink-0 border-l border-white/7 bg-[#0f1219]">
+          <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(32vw,340px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#0f1219] lg:flex">
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4.5 py-3.5 border-b border-white/7 shrink-0">
               <div className="live-dot w-2 h-2 rounded-full bg-[#00e5c0] shadow-[0_0_9px_rgba(0,229,192,0.7)]" />
@@ -383,15 +395,17 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
 
         {/* ── MOBILE DRAWER ── */}
         <div
+          role="dialog"
+          aria-label="Debate chat"
+          aria-modal={chatOpen}
           inert={!chatOpen}
           aria-hidden={!chatOpen}
-          className={`lg:hidden fixed bottom-0 left-0 right-0 z-[100]
-            flex flex-col h-[68svh]
+          className={`lg:hidden fixed inset-x-0 bottom-0 z-[100] flex flex-col h-[min(78dvh,640px)]
             bg-[#0f1219] rounded-t-[26px]
             border border-b-0 border-white/9
             shadow-[0_-18px_60px_rgba(0,0,0,0.65)]
-            overflow-hidden
-            transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]
+             overflow-hidden pb-[env(safe-area-inset-bottom)]
+             transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]
             ${chatOpen ? 'translate-y-0' : 'translate-y-full'}`}
         >
           {/* Drag pill */}
@@ -408,7 +422,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             <button
               onClick={closeChat}
               aria-label="Close chat"
-              className="w-[33px] h-[33px] rounded-full
+              className="size-11 rounded-full
                 bg-white/7 border border-white/10
                 flex items-center justify-center cursor-pointer
                 transition-all duration-200
@@ -456,8 +470,8 @@ export default function VideoPage() {
     }
   }, [loading, verificationError, user, accepted, router]);
 
-  if (loading) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
-  if (verificationError) return <div role="alert" className="mx-auto my-14 max-w-md rounded-xl border border-amber-300/30 p-6 text-center text-white/80">Session could not be verified. <button className="ml-2 font-semibold text-primary underline" onClick={() => void retrySession()}>Retry</button></div>;
+  if (loading) return <PageState title="Checking your session…" description="Verifying your account before opening the camera." />;
+  if (verificationError) return <PageState status="alert" title="Connection interrupted" description="Your session could not be verified. Your login has not been cleared." action={<button className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-background" onClick={() => void retrySession()}>Retry session</button>} />;
   if (!user || !accepted) return null;
   return <AuthenticatedDebate />;
 }

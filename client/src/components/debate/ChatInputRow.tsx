@@ -23,7 +23,7 @@ export function ChatInputRow({
       <textarea
         className="flex-1 px-3.5 py-2.5 rounded-[22px] bg-white/5 border border-white/8
           text-[#dde2ee] text-sm leading-snug outline-none resize-none
-          min-h-[75px] max-h-[150px] placeholder:text-white/35
+          min-h-[48px] max-h-[120px] placeholder:text-white/35
           transition-all duration-200
           focus:bg-white/8 focus:border-[rgba(0,229,192,0.38)] focus:shadow-[0_0_0_3px_rgba(0,229,192,0.07)]"
         aria-label="Chat message"
@@ -41,10 +41,10 @@ export function ChatInputRow({
         rows={1}
       />
       <button
-        onClick={send}
+        onClick={() => void send()}
         disabled={sending || !val.trim()}
-        aria-label="Send"
-        className="w-[42px] h-[42px] rounded-full border-none cursor-pointer shrink-0
+        aria-label="Send message"
+        className="w-11 h-11 rounded-full border-none cursor-pointer shrink-0
           bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
           shadow-[0_4px_14px_rgba(0,229,192,0.28)]
           flex items-center justify-center

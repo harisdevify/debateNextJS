@@ -2,21 +2,12 @@
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/admin/AdminPanel';
+import { PageState } from '@/components/ui/PageState';
 export default function AdminPage() {
   const { user, loading, verificationError, retrySession } = useAuth();
   if (loading)
-    return (
-      <main className="p-8" role="status">
-        Checking access...
-      </main>
-    );
-  if (verificationError) return (
-    <main role="alert" className="mx-auto my-16 max-w-md rounded-xl border border-amber-400/25 p-6 text-center text-white/80">
-      <h1 className="text-lg font-semibold">Could not verify administrator access</h1>
-      <p className="mt-2 text-sm text-white/60">The authentication server may be unavailable. Your session has not been cleared.</p>
-      <button className="mt-4 rounded-lg bg-primary px-4 py-2 text-background" onClick={() => void retrySession()}>Retry</button>
-    </main>
-  );
+    return <PageState title="Checking access…" description="Verifying administrator permissions." />;
+  if (verificationError) return <PageState status="alert" title="Could not verify administrator access" description="The authentication server may be unavailable. Your session has not been cleared." action={<button className="min-h-11 rounded-xl bg-primary px-5 text-background" onClick={() => void retrySession()}>Retry</button>} />;
   if (!user)
     return (
       <main className="p-8">

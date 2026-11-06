@@ -123,7 +123,7 @@ export default function Header() {
           {/* Mobile Hamburger */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="pressable flex h-10 w-10 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/5 md:hidden"
+            className="pressable flex size-11 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-primary/40 md:hidden"
             aria-label="Open menu"
             aria-expanded={sidebarOpen}
             aria-controls="mobile-navigation"
@@ -149,7 +149,7 @@ export default function Header() {
         aria-label="Mobile navigation"
         aria-hidden={!sidebarOpen}
         inert={!sidebarOpen}
-        className={`fixed top-0 right-0 z-[70] flex h-full w-[280px] flex-col
+        className={`fixed top-0 right-0 z-[70] flex h-dvh w-[min(320px,calc(100vw-2rem))] flex-col
                     border-l border-white/[0.08] bg-[#0a1210]/95 backdrop-blur-xl
                     shadow-[-8px_0_40px_rgba(0,0,0,0.5)]
                     transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:hidden
@@ -162,7 +162,7 @@ export default function Header() {
           </span>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="pressable flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            className="pressable flex size-11 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Close menu"
           >
             <X size={20} />
@@ -172,7 +172,7 @@ export default function Header() {
         {/* Nav Links — staggered entrance */}
         <nav className="stagger flex flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-4">
           {navLinks.map(({ href, label }) => (
-            <Link key={href} href={href} className={sidebarLinkClass(href)}>
+            <Link key={href} href={href} className={sidebarLinkClass(href)} onClick={() => setSidebarOpen(false)}>
               {label}
             </Link>
           ))}
@@ -199,7 +199,7 @@ export default function Header() {
           )}
 
           <p className="mt-4 text-center text-xs text-white/25">
-            © 2025 Islamic Debate Platform
+            Islamic Debate Platform
           </p>
         </div>
       </aside>

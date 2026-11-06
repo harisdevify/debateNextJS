@@ -258,3 +258,13 @@ body,
   border-radius: 3px;
 }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Responsive foundations */
+html { scroll-padding-top: var(--header-height); }
+body { overflow-x: clip; }
+button, input, select, textarea { font: inherit; }
+@media (max-width: 640px) { .max-container { padding-inline: 16px; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-dot, .badge-anim { animation: none !important; }
+  .pressable { will-change: auto; }
+}
