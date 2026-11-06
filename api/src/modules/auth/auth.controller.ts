@@ -23,6 +23,7 @@ import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthOriginGuard } from './guards/auth-origin.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -64,6 +65,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthOriginGuard)
   logout(@Res({ passthrough: true }) response: Response) {
     response.clearCookie('accessToken', this.cookieOptions());
     return { message: 'Logged out successfully!' };
@@ -108,7 +110,7 @@ export class AuthController {
 
   @Post('accept-rules')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AuthOriginGuard)
   acceptRules(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: AcceptRulesDto
@@ -117,7 +119,7 @@ export class AuthController {
   }
 
   @Patch('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AuthOriginGuard)
   updateMe(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateProfileDto

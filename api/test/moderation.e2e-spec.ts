@@ -119,6 +119,7 @@ describe('admin moderation (real PostgreSQL)', () => {
       .expect(403);
     await http
       .patch('/api/v1/auth/me')
+      .set('Origin', origin)
       .set('Cookie', member.cookie)
       .send({ role: 'ADMIN' })
       .expect(400);
