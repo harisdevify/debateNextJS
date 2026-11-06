@@ -34,12 +34,16 @@ export class AccountAccessService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async requireValidToken(token: string): Promise<void> {
+  async requireValidTokenHash(tokenHash: string): Promise<void> {
     const revoked = await this.prisma.revokedToken.findUnique({
-      where: { tokenHash: this.tokenHash(token) },
+      where: { tokenHash },
       select: { tokenHash: true },
     });
     if (revoked) throw new UnauthorizedException('Session has ended.');
+  }
+
+  async requireValidToken(token: string): Promise<void> {
+    await this.requireValidTokenHash(this.tokenHash(token));
   }
 
   async revokeToken(userId: number, token: string, expiresAt: Date): Promise<void> {

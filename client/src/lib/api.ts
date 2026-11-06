@@ -3,7 +3,7 @@ import axios, { type AxiosError } from 'axios';
 import { toast } from 'sonner';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8800/api/v1',
+  baseURL: '/api/v1', // same-origin Next.js reverse proxy: first-party cookies
   timeout: 10000,
   withCredentials: true, // required so the auth cookie is sent
 });

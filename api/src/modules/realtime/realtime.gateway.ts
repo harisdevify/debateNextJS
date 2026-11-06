@@ -26,6 +26,8 @@ interface SocketUser {
 }
 interface TokenPayload {
   id: number;
+  kind?: string;
+  sessionHash?: string;
 }
 type DebateSocket = Socket & {
   data: {
@@ -162,17 +164,28 @@ export class RealtimeGateway
     server.use(async (rawSocket, next) => {
       const socket = rawSocket as DebateSocket;
       try {
-        const token = readCookie(
+        const ticket = socket.handshake.auth?.ticket;
+        const hasTicket = typeof ticket === 'string' && ticket.length > 0;
+        // Legacy same-site clients may still use cookies during migration.
+        const cookieToken = hasTicket ? undefined : readCookie(
           socket.handshake.headers.cookie,
           "accessToken",
         );
+        const token = hasTicket ? ticket : cookieToken;
         if (!token) return next(new Error("Not authenticated"));
         const payload = await this.jwtService.verifyAsync<TokenPayload>(token, {
           secret: this.config.getOrThrow<string>("JWT_SECRET"),
         });
         if (!Number.isInteger(payload.id))
           return next(new Error("Not authenticated"));
-        await this.access.requireValidToken(token);
+        if (hasTicket && (payload.kind !== 'socket-ticket' ||
+          typeof payload.sessionHash !== 'string' ||
+          !/^[a-f0-9]{64}$/.test(payload.sessionHash)))
+          return next(new Error("Not authenticated"));
+        if (!hasTicket && payload.kind === 'socket-ticket')
+          return next(new Error("Not authenticated"));
+        const sessionHash = hasTicket ? payload.sessionHash! : this.access.tokenHash(token);
+        await this.access.requireValidTokenHash(sessionHash);
         const user = await this.prisma.user.findUnique({
           where: { id: payload.id },
           select: { id: true, fullname: true },
@@ -180,7 +193,7 @@ export class RealtimeGateway
         if (!user) return next(new Error("Not authenticated"));
         await this.access.requireActive(user.id);
         socket.data.user = user;
-        socket.data.tokenHash = this.access.tokenHash(token);
+        socket.data.tokenHash = sessionHash;
         socket.data.peerId = null;
         socket.data.lastPeerUserId = null;
         next();

@@ -98,6 +98,17 @@ export class AuthService {
     };
   }
 
+  async issueSocketTicket(userId: number, token: string): Promise<string> {
+    // The parent login session is checked again by Socket.IO and per packet.
+    // No raw access token is returned to browser JavaScript.
+    return this.jwtService.signAsync({
+      id: userId,
+      kind: 'socket-ticket',
+      sessionHash: this.access.tokenHash(token),
+      jti: randomUUID(),
+    }, { expiresIn: '30s' });
+  }
+
   async logout(token: string | undefined): Promise<void> {
     if (!token) return;
     let payload: { id: number; exp?: number };
