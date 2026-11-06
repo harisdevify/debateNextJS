@@ -5,6 +5,7 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
   ArrowRight,
   BookOpen,
+  CheckCircle2,
    Eye,
   EyeOff,
   Lock,

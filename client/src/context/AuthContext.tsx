@@ -78,8 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   useEffect(() => {
-    void verifySession();
-    return () => { authVersion.current++; };
+    // Schedule the initial request after commit, not synchronously in the effect.
+    const versionRef = authVersion;
+    void Promise.resolve().then(() => verifySession());
+    return () => { versionRef.current++; };
   }, [verifySession]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
