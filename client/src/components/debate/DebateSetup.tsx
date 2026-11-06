@@ -25,13 +25,13 @@ export function DebateSetup({ initial = DEFAULT_DEBATE_PREFERENCES, onStart }: P
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-8 sm:px-6 sm:py-12">
       <header className="mb-8">
         <p className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-primary">Prepare your debate</p>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Find the right conversation</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Find the right conversation</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-white/60">Choose a topic, language and conversation style. You will only be matched with someone who selected all three options.</p>
       </header>
-      <form onSubmit={submit} className="space-y-7 rounded-2xl border border-white/10 bg-[#0f1817] p-5 shadow-lg sm:p-8">
+      <form onSubmit={submit} className="space-y-8 rounded-[24px] border border-white/15 bg-[#111e1a] p-5 shadow-[0_20px_65px_rgba(0,0,0,0.3)] sm:p-9">
         <fieldset>
           <legend className="mb-3 text-sm font-semibold text-white">1. Discussion topic</legend>
           <div className="grid gap-2 sm:grid-cols-2">

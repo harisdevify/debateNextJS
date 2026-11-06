@@ -96,7 +96,7 @@ export default function SignUpPage() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
+      <section className="relative flex-1 flex items-center justify-center px-4 py-12 sm:px-6 sm:py-20">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -123,14 +123,14 @@ export default function SignUpPage() {
           />
         </div>
 
-        <div className="relative z-10 w-full max-w-[920px] grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="relative z-10 w-full max-w-[1120px] grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16 items-center">
           {/* ── LEFT PANEL ── */}
           <div className="hidden lg:flex flex-col justify-center gap-8 pr-6 stagger">
             <div>
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 mb-5 rounded-full border border-[rgba(0,191,166,0.3)] bg-[rgba(0,191,166,0.08)] text-primary text-xs font-semibold uppercase tracking-wider">
                 Get Started
               </div>
-              <h2 className="text-[clamp(2rem,3.5vw,2.8rem)] font-black text-white leading-[1.15] mb-4">
+              <h2 className="text-[clamp(2.8rem,4.5vw,4.6rem)] font-semibold tracking-[-0.045em] text-white leading-[1.08] mb-4">
                 Join the Debate.
                 <br />
                 <span
@@ -140,7 +140,7 @@ export default function SignUpPage() {
                   Make Your Voice Heard.
                 </span>
               </h2>
-              <p className="text-white/40 text-[0.95rem] leading-relaxed max-w-[340px]">
+              <p className="text-white/65 text-base leading-7 max-w-[340px]">
                 Create your account and start engaging in structured, respectful
                 Islamic discussions with scholars around the world.
               </p>
@@ -169,7 +169,7 @@ export default function SignUpPage() {
           </div>
 
           {/* ── RIGHT PANEL — FORM ── */}
-          <div className="rounded-2xl border border-white/[0.1] bg-[rgba(10,24,22,0.85)] p-5 shadow-xl sm:p-8 backdrop-blur-sm fade-up d-2">
+          <div className="rounded-[24px] border border-white/15 bg-[#111e1a] p-6 shadow-[0_30px_80px_rgba(0,0,0,.32)] sm:p-9 backdrop-blur-sm fade-up d-2">
             <div className="mb-7">
               <h3 className="text-white font-black text-[1.5rem]">
                 Create Account

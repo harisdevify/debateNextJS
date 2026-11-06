@@ -268,3 +268,7 @@ button, input, select, textarea { font: inherit; }
   .live-dot, .badge-anim { animation: none !important; }
   .pressable { will-change: auto; }
 }
+
+/* Visual refinements: maintain brand tokens with calmer interface surfaces. */
+:root { color-scheme: dark; }
+::selection { background: rgba(0,217,189,.22); color: #fff; }
