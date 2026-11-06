@@ -34,6 +34,7 @@ const STATUS_TEXT: Record<Exclude<DebateStatus, 'connected'>, string> = {
   'peer-left': 'Your partner left the debate.',
   blocked: 'You blocked this user. You will not be matched with each other again.',
   error: 'Could not start. Check camera access and refresh.',
+  completed: 'Formal debate completed. Both speakers received equal speaking time.',
 };
 
 /* ── Chat Body ─────────────────────────────── */
@@ -88,8 +89,17 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
     toggleCamera,
     micOn,
     camOn,
+    formalState,
+    maySpeak,
+    debateRemainingMs,
+    turnRemainingMs,
   } = useDebateRoom(localRef, remoteRef, preferences);
 
+  const formatRemaining = (value: number | null) => {
+    if (value === null) return '--:--';
+    const seconds = Math.ceil(value / 1000);
+    return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+  };
   const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
@@ -135,6 +145,18 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
               <span className="truncate">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
               <button onClick={onChangePreferences} className="shrink-0 font-semibold text-primary hover:underline">Change preferences</button>
             </div>
+            {preferences.mode === 'formal' && formalState && status !== 'completed' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3" role="status" aria-live="off">
+                <div><p className="text-xs font-semibold uppercase tracking-widest text-primary">Formal debate · Turn {formalState.turnNumber} of 6</p><p className="mt-1 text-sm font-semibold text-white">{status === 'reconnecting' ? 'Reconnecting — timer continues' : maySpeak ? 'Your turn to speak' : "Partner's turn — your microphone is off"}</p></div>
+                <div className="flex gap-6 text-right"><div><p className="text-xs text-white/50">Turn</p><p className="font-mono text-lg font-bold text-white">{formatRemaining(turnRemainingMs)}</p></div><div><p className="text-xs text-white/50">Debate</p><p className="font-mono text-lg font-bold text-white">{formatRemaining(debateRemainingMs)}</p></div></div>
+              </div>
+            )}
+            {status === 'completed' && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3" role="status">
+                <div><p className="font-semibold text-white">Debate completed</p><p className="text-sm text-white/60">10 minutes completed · 5 minutes for each speaker</p></div>
+                <button onClick={onChangePreferences} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-background hover:bg-primary-hover">Start another debate</button>
+              </div>
+            )}
             {/* VIDEO GRID */}
             <div
               className="grid grid-cols-2 gap-3.5 flex-1 min-h-0
@@ -247,7 +269,9 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
                   toggleMic();
 
                 }}
-                title={micOn ? 'Mute' : 'Unmute'}
+                title={!maySpeak ? 'Wait for your speaking turn' : micOn ? 'Mute' : 'Unmute'}
+                 disabled={!maySpeak || status === 'completed'}
+                 aria-label={!maySpeak ? 'Microphone disabled until your turn' : micOn ? 'Mute microphone' : 'Unmute microphone'}
                 className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
                   flex items-center justify-center outline-none
                   backdrop-blur-[8px] transition-all duration-200

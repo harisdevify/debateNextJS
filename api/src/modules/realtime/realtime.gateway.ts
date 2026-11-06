@@ -1,3 +1,4 @@
+import { formalClock, FORMAL_RECONNECT_GRACE_MS, type FormalClock } from './formal-debate-clock';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { DebatePreferencesDto } from '../debate-setup/dto/debate-preferences.dto';
@@ -40,6 +41,21 @@ type DebateSocket = Socket & {
   };
 };
 type Ack = (response: { ok: boolean; message?: string }) => void;
+
+interface FormalParticipant {
+  userId: number;
+  fullname: string;
+  socketId: string | null;
+}
+interface FormalSession {
+  matchId: string;
+  startedAt: number;
+  preferences: DebatePreferencesDto;
+  participants: [FormalParticipant, FormalParticipant];
+  timer?: ReturnType<typeof setTimeout>;
+  reconnectTimers: Map<number, ReturnType<typeof setTimeout>>;
+}
+
 
 const MAX_CHAT_LENGTH = 1000;
 const MAX_REPORT_DETAILS = 500;
@@ -98,6 +114,8 @@ export class RealtimeGateway
 {
   @WebSocketServer() private server!: Server;
   private readonly queue: string[] = [];
+  private readonly formalSessions = new Map<string, FormalSession>();
+  private readonly formalByUser = new Map<number, string>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -127,6 +145,12 @@ export class RealtimeGateway
     }
   };
   onModuleDestroy() {
+    for (const session of this.formalSessions.values()) {
+      if (session.timer) clearTimeout(session.timer);
+      for (const timer of session.reconnectTimers.values()) clearTimeout(timer);
+    }
+    this.formalSessions.clear();
+    this.formalByUser.clear();
     this.access.events.off('moderated', this.onModerated);
     this.access.events.off('session-revoked', this.onSessionRevoked);
   }
@@ -214,15 +238,35 @@ export class RealtimeGateway
   }
 
   handleDisconnect(client: DebateSocket) {
+    const matchId = client.data.matchId;
+    const session = matchId ? this.formalSessions.get(matchId) : undefined;
+    const userId = client.data.user?.id;
+    if (session && userId) {
+      const participant = session.participants.find((p) => p.userId === userId);
+      if (participant?.socketId === client.id) {
+        participant.socketId = null;
+        const other = session.participants.find((p) => p.userId !== userId);
+        if (other?.socketId) this.server.to(other.socketId).emit('peer-reconnecting', { matchId });
+        const prior = session.reconnectTimers.get(userId);
+        if (prior) clearTimeout(prior);
+        session.reconnectTimers.set(userId, setTimeout(() => {
+          if (this.formalSessions.has(matchId) && !participant.socketId)
+            this.endFormalSession(session, 'left');
+        }, FORMAL_RECONNECT_GRACE_MS));
+        return;
+      }
+    }
     this.leaveDebate(client);
   }
 
   private async findPartner(socket: DebateSocket, input: unknown) {
     const user = socket.data.user;
     if (!user) return;
+    const preferences = parsePreferences(input);
+    // A disconnected formal participant may resume the same timed session.
+    if (preferences && this.resumeFormalSession(socket, preferences)) return;
     this.leaveDebate(socket);
     const version = socket.data.searchVersion;
-    const preferences = parsePreferences(input);
     if (!preferences) {
       socket.emit('search-error', { message: 'Select a valid topic, language and mode.' });
       return;
@@ -313,6 +357,113 @@ export class RealtimeGateway
       initiator: false,
       peer: { fullname: partner.data.user?.fullname ?? "" },
     });
+    if (preferences.mode === DebateMode.FORMAL) {
+      const session: FormalSession = {
+        matchId,
+        startedAt: Date.now(),
+        preferences,
+        participants: [
+          { userId: partner.data.user!.id, fullname: partner.data.user!.fullname, socketId: partner.id },
+          { userId: user.id, fullname: user.fullname, socketId: socket.id },
+        ],
+        reconnectTimers: new Map(),
+      };
+      this.formalSessions.set(matchId, session);
+      this.formalByUser.set(user.id, matchId);
+      this.formalByUser.set(partner.data.user!.id, matchId);
+      this.broadcastFormalState(session);
+    }
+  }
+
+  /** Rebinds a disconnected participant without resetting the formal clock. */
+  private resumeFormalSession(socket: DebateSocket, preferences: DebatePreferencesDto): boolean {
+    const userId = socket.data.user?.id;
+    if (!userId) return false;
+    const matchId = this.formalByUser.get(userId);
+    const session = matchId ? this.formalSessions.get(matchId) : undefined;
+    if (!session) return false;
+    const participant = session.participants.find((p) => p.userId === userId)!;
+    if (participant.socketId && participant.socketId !== socket.id &&
+      this.server.sockets.sockets.get(participant.socketId)?.connected) {
+      socket.emit('debate-already-active');
+      return true;
+    }
+    if (!compatible(preferences, session.preferences)) {
+      socket.emit('search-error', { message: 'Resume your existing formal debate before changing preferences.' });
+      return true;
+    }
+    if (formalClock(session.startedAt).completed) {
+      this.endFormalSession(session, 'completed');
+      socket.emit('formal-completed', { matchId: session.matchId });
+      return true;
+    }
+    participant.socketId = socket.id;
+    socket.data.preferences = session.preferences;
+    socket.data.matchId = session.matchId;
+    socket.data.lastPeerUserId = session.participants.find((p) => p.userId !== userId)?.userId;
+    const timer = session.reconnectTimers.get(userId);
+    if (timer) clearTimeout(timer);
+    session.reconnectTimers.delete(userId);
+    const [first, second] = session.participants;
+    if (first.socketId && second.socketId) {
+      const firstSocket = this.server.sockets.sockets.get(first.socketId) as DebateSocket | undefined;
+      const secondSocket = this.server.sockets.sockets.get(second.socketId) as DebateSocket | undefined;
+      if (firstSocket && secondSocket) {
+        firstSocket.data.peerId = secondSocket.id;
+        secondSocket.data.peerId = firstSocket.id;
+        firstSocket.emit('matched', {
+          matchId: session.matchId, preferences: session.preferences,
+          initiator: true, peer: { fullname: second.fullname },
+        });
+        secondSocket.emit('matched', {
+          matchId: session.matchId, preferences: session.preferences,
+          initiator: false, peer: { fullname: first.fullname },
+        });
+        this.broadcastFormalState(session);
+      }
+    } else {
+      socket.emit('peer-reconnecting', { matchId: session.matchId });
+      this.broadcastFormalState(session);
+    }
+    return true;
+  }
+
+  private broadcastFormalState(session: FormalSession): void {
+    if (!this.formalSessions.has(session.matchId)) return;
+    if (session.timer) clearTimeout(session.timer);
+    const state: FormalClock = formalClock(session.startedAt);
+    if (state.completed) {
+      this.endFormalSession(session, 'completed');
+      return;
+    }
+    session.participants.forEach((participant, index) => {
+      if (!participant.socketId) return;
+      const socket = this.server.sockets.sockets.get(participant.socketId);
+      socket?.emit('formal-state', {
+        matchId: session.matchId,
+        ...state,
+        isSpeaker: state.speakerIndex === index,
+      });
+    });
+    session.timer = setTimeout(() => this.broadcastFormalState(session),
+      Math.max(1, state.turnEndsAt - Date.now()));
+  }
+
+  private endFormalSession(session: FormalSession, reason: 'completed' | 'left'): void {
+    if (!this.formalSessions.delete(session.matchId)) return;
+    if (session.timer) clearTimeout(session.timer);
+    for (const timer of session.reconnectTimers.values()) clearTimeout(timer);
+    for (const participant of session.participants) {
+      this.formalByUser.delete(participant.userId);
+      if (!participant.socketId) continue;
+      const socket = this.server.sockets.sockets.get(participant.socketId) as DebateSocket | undefined;
+      if (!socket) continue;
+      socket.data.peerId = null;
+      socket.data.matchId = undefined;
+      socket.data.searchVersion = (socket.data.searchVersion ?? 0) + 1;
+      socket.emit(reason === 'completed' ? 'formal-completed' : 'peer-left',
+        { matchId: session.matchId, endedAt: session.startedAt + 600_000 });
+    }
   }
 
   private async loadBlockedIds(userId: number): Promise<Set<number>> {
@@ -469,6 +620,11 @@ export class RealtimeGateway
   }
 
   private leaveDebate(socket: DebateSocket) {
+    const formal = socket.data.matchId ? this.formalSessions.get(socket.data.matchId) : undefined;
+    if (formal) {
+      this.endFormalSession(formal, 'left');
+      return;
+    }
     socket.data.searchVersion = (socket.data.searchVersion ?? 0) + 1;
     socket.data.matchId = undefined;
     const queueIndex = this.queue.indexOf(socket.id);

@@ -385,6 +385,43 @@ describe("Debate API (e2e)", () => {
       );
     });
 
+    it("resumes the same formal session and authoritative clock after a short disconnect", async () => {
+      const firstUser = await loginAs();
+      const secondUser = await loginAs();
+      const first = await connect(firstUser.cookie);
+      const second = await connect(secondUser.cookie);
+      const formal = { topic: "science", language: "en", mode: "formal" };
+      const waiting = once(first, "waiting");
+      first.emit("find-partner", formal);
+      await waiting;
+      const matchedFirst = once<{ matchId: string }>(first, "matched");
+      const matchedSecond = once(second, "matched");
+      const clockFirst = once<{ startedAt: number; endsAt: number; isSpeaker: boolean; turnNumber: number }>(first, "formal-state");
+      const clockSecond = once<{ isSpeaker: boolean }>(second, "formal-state");
+      second.emit("find-partner", formal);
+      const [match, , before, other] = await Promise.all([matchedFirst, matchedSecond, clockFirst, clockSecond]);
+      expect(before.isSpeaker).toBe(true);
+      expect(other.isSpeaker).toBe(false);
+      expect(before.endsAt - before.startedAt).toBe(600_000);
+      const reconnecting = once(first, "peer-reconnecting");
+      second.disconnect();
+      await reconnecting;
+      const resumed = await connect(secondUser.cookie);
+      const rematched = once<{ matchId: string }>(resumed, "matched");
+      const firstRematched = once(first, "matched");
+      const clock = once<{ startedAt: number; endsAt: number; turnNumber: number; isSpeaker: boolean }>(resumed, "formal-state");
+      resumed.emit("find-partner", formal);
+      const [matchAgain, , after] = await Promise.all([rematched, firstRematched, clock]);
+      expect(matchAgain.matchId).toBe(match.matchId);
+      expect(after.startedAt).toBe(before.startedAt);
+      expect(after.endsAt).toBe(before.endsAt);
+      expect(after.turnNumber).toBe(1);
+      expect(after.isSpeaker).toBe(false);
+      const left = once(first, "peer-left");
+      resumed.emit("leave");
+      await left;
+    });
+
     it("matches only identical topic, language and mode without skipping compatible FIFO entries", async () => {
       const a = await connect((await loginAs()).cookie);
       const b = await connect((await loginAs()).cookie);
