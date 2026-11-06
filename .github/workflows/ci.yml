@@ -66,7 +66,8 @@ jobs:
 
   browser-e2e:
     name: Browser E2E (Chromium)
-    runs-on: ubuntu-latest
+    # Playwright 1.56 Chromium binaries support Ubuntu 24.04, not 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       CI: 'true'
