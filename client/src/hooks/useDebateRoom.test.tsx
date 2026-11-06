@@ -249,3 +249,59 @@ it("uses a handed-off preview stream instead of asking permission twice", async 
   await waitFor(() => expect(track.stop).toHaveBeenCalled());
   getUserMedia.mockRestore();
 });
+
+it("switches an active camera track with replaceTrack and releases the old camera", async () => {
+  const audio = { kind: "audio", enabled: true, readyState: "live", stop: vi.fn(), onended: null,
+    getSettings: () => ({ deviceId: "mic-1" }) };
+  const camera = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null,
+    getSettings: () => ({ deviceId: "cam-1" }) };
+  const replacement = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null,
+    getSettings: () => ({ deviceId: "cam-2" }) };
+  const tracks = [audio, camera];
+  const stream = { getTracks: () => [...tracks], getAudioTracks: () => tracks.filter(t => t.kind === "audio"),
+    getVideoTracks: () => tracks.filter(t => t.kind === "video"),
+    removeTrack: (track: typeof audio | typeof camera) => { tracks.splice(tracks.indexOf(track), 1); },
+    addTrack: (track: typeof audio | typeof camera) => { tracks.push(track); } };
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) =>
+      constraints.video && !constraints.audio
+        ? { getVideoTracks: () => [replacement], getTracks: () => [replacement] }
+        : stream),
+    enumerateDevices: vi.fn(async () => []),
+  } });
+  const { result } = await setup();
+  await fire("matched", { matchId: "switch-1", initiator: false });
+  const replaceTrack = vi.fn(async () => {});
+  Object.assign(Peer.instances[0], { getSenders: () => [{ track: camera, replaceTrack }] });
+  let changed = false;
+  await act(async () => { changed = await result.current.switchDevice("video", "cam-2"); });
+  expect(changed).toBe(true);
+  expect(replaceTrack).toHaveBeenCalledWith(replacement);
+  expect(camera.stop).toHaveBeenCalledOnce();
+  expect(replacement.stop).not.toHaveBeenCalled();
+  expect(result.current.selectedDeviceIds.video).toBe("cam-2");
+});
+it("retains old camera if RTP sender rejects switching", async () => {
+  const camera = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null,
+    getSettings: () => ({ deviceId: "cam-1" }) };
+  const replacement = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null,
+    getSettings: () => ({ deviceId: "cam-2" }) };
+  const tracks = [camera];
+  const stream = { getTracks: () => tracks, getAudioTracks: () => [],
+    getVideoTracks: () => tracks, removeTrack: vi.fn(), addTrack: vi.fn() };
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: vi.fn(async (constraints: MediaStreamConstraints) =>
+      constraints.video && !constraints.audio ? { getVideoTracks: () => [replacement], getTracks: () => [replacement] } : stream),
+    enumerateDevices: vi.fn(async () => []),
+  } });
+  const { result } = await setup();
+  await fire("matched", { matchId: "switch-2", initiator: false });
+  const replaceTrack = vi.fn(async () => { throw new Error("replaceTrack failed"); });
+  Object.assign(Peer.instances[0], { getSenders: () => [{ track: camera, replaceTrack }] });
+  let changed = true;
+  await act(async () => { changed = await result.current.switchDevice("video", "cam-2"); });
+  expect(changed).toBe(false);
+  expect(camera.stop).not.toHaveBeenCalled();
+  expect(replacement.stop).toHaveBeenCalled();
+  expect(stream.removeTrack).not.toHaveBeenCalled();
+});
