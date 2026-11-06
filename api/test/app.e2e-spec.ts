@@ -539,14 +539,14 @@ describe("Debate API (e2e)", () => {
       const offer = once<{ data: { sdp: string } }>(b, "offer");
       a.emit("offer", {
         matchId: ma.matchId,
-        data: { type: "offer", sdp: "v=0\\r\\no=- 1 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\nm=audio 9 UDP/TLS/RTP/SAVPF 111\\r\\n" },
+        data: { type: "offer", sdp: "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n" },
       });
       expect((await offer).data.sdp).toContain("m=audio");
 
       const answer = once<{ data: { sdp: string } }>(a, "answer");
       b.emit("answer", {
         matchId: mb.matchId,
-        data: { type: "answer", sdp: "v=0\\r\\no=- 1 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\nm=audio 9 UDP/TLS/RTP/SAVPF 111\\r\\n" },
+        data: { type: "answer", sdp: "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n" },
       });
       expect((await answer).data.sdp).toContain("m=audio");
 
