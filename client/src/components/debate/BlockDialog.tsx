@@ -30,7 +30,7 @@ export function BlockDialog({ open, name, onClose, onConfirm }: BlockDialogProps
         <button
           type="button"
           onClick={onClose}
-          className="pressable rounded-full border border-white/10 px-5 py-2 text-sm text-white/70 transition-colors hover:text-white"
+          className="pressable min-h-11 rounded-xl border border-white/10 px-5 py-2 text-sm text-white/70 transition-colors hover:text-white"
         >
           Cancel
         </button>
@@ -38,7 +38,7 @@ export function BlockDialog({ open, name, onClose, onConfirm }: BlockDialogProps
           type="button"
           onClick={handleConfirm}
           disabled={busy}
-          className="pressable rounded-full bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+          className="pressable min-h-11 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-background transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? 'Blocking…' : 'Block'}
         </button>
