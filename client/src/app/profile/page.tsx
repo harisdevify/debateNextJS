@@ -414,14 +414,16 @@ function ProfileContent() {
 
 /* ── Auth gate ─────────────────────────────── */
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, verificationError, retrySession } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-  }, [loading, user, router]);
+    if (!loading && !verificationError && !user) router.replace('/login');
+  }, [loading, verificationError, user, router]);
 
-  if (loading || !user) return null;
+  if (loading) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
+  if (verificationError) return <div role="alert" className="mx-auto my-16 max-w-md rounded-2xl border border-amber-300/25 p-6 text-center text-white/80">Could not verify your session. <button onClick={() => void retrySession()} className="font-semibold text-primary underline">Retry connection</button></div>;
+  if (!user) return null;
   // ProfileContent seeds its form from the user on first render
   return <ProfileContent key={user.id} />;
 }
