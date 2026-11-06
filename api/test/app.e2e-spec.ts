@@ -206,6 +206,7 @@ describe("Debate API (e2e)", () => {
 
       const patched = await http
         .patch("/api/v1/auth/me")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .send({
           fullname: "  New Name ",
@@ -222,6 +223,7 @@ describe("Debate API (e2e)", () => {
 
       const bad = await http
         .patch("/api/v1/auth/me")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .send({ fullname: "", gender: "f", education: "m", country: "u" })
         .expect(400);
@@ -229,11 +231,13 @@ describe("Debate API (e2e)", () => {
 
       await http
         .patch("/api/v1/auth/me")
+        .set("Origin", "http://localhost:3000")
         .send({ fullname: "x", gender: "f", education: "m", country: "u" })
         .expect(401);
 
       const out = await http
         .post("/api/v1/auth/logout")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .expect(200);
       expect((out.headers["set-cookie"] as unknown as string[])[0]).toMatch(
@@ -270,6 +274,39 @@ describe("Debate API (e2e)", () => {
       expect(stored?.ageConfirmedAt).toBeInstanceOf(Date);
     });
 
+    it("rejects cross-site and missing-origin cookie-authenticated writes", async () => {
+      const { cookie } = await loginAs();
+      const body = {
+        fullname: "Blocked Update",
+        gender: "female",
+        education: "MS",
+        country: "PK",
+      };
+      await http.patch("/api/v1/auth/me")
+        .set("Cookie", cookie)
+        .send(body)
+        .expect(403);
+      await http.patch("/api/v1/auth/me")
+        .set("Cookie", cookie)
+        .set("Origin", "https://malicious.example")
+        .send(body)
+        .expect(403);
+      await http.post("/api/v1/auth/accept-rules")
+        .set("Cookie", cookie)
+        .set("Origin", "https://malicious.example")
+        .send({ acceptRules: true, confirmAge: true })
+        .expect(403);
+      await http.post("/api/v1/auth/logout")
+        .set("Cookie", cookie)
+        .set("Origin", "https://malicious.example")
+        .expect(403);
+      await http.patch("/api/v1/auth/me")
+        .set("Cookie", cookie)
+        .set("Origin", "http://localhost:3000")
+        .send(body)
+        .expect(200);
+    });
+
     it("accept-rules: older accounts can accept; needs login and both boxes ticked", async () => {
       const { user, cookie } = await loginAs();
       await prisma.user.update({
@@ -285,10 +322,12 @@ describe("Debate API (e2e)", () => {
 
       await http
         .post("/api/v1/auth/accept-rules")
+        .set("Origin", "http://localhost:3000")
         .send({ acceptRules: true, confirmAge: true })
         .expect(401);
       const bad = await http
         .post("/api/v1/auth/accept-rules")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .send({ acceptRules: true, confirmAge: false })
         .expect(400);
@@ -296,6 +335,7 @@ describe("Debate API (e2e)", () => {
 
       const ok = await http
         .post("/api/v1/auth/accept-rules")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .send({ acceptRules: true, confirmAge: true })
         .expect(200);
@@ -487,6 +527,7 @@ describe("Debate API (e2e)", () => {
 
       await http
         .post("/api/v1/auth/accept-rules")
+        .set("Origin", "http://localhost:3000")
         .set("Cookie", cookie)
         .send({ acceptRules: true, confirmAge: true })
         .expect(200);
