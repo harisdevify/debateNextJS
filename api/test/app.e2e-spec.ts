@@ -508,9 +508,59 @@ describe("Debate API (e2e)", () => {
       tab1.emit("find-partner");
       await w1;
 
-      const w2 = once(tab2, "waiting"); // still waiting, not matched with tab1
+      const busy = once(tab2, "debate-already-active");
+      tab2.emit("find-partner");
+      await busy;
+      // After the original tab leaves, the other tab is allowed to search.
+      tab1.emit("leave");
+      const w2 = once(tab2, "waiting");
       tab2.emit("find-partner");
       await w2;
+    });
+
+    it("logout revokes only its JWT and disconnects matching sockets across tabs", async () => {
+      const { user, cookie } = await loginAs();
+      // A second login must have a distinct token and remain usable.
+      const secondLogin = await http.post("/api/v1/auth/login")
+        .send({ email: user.email, password: PASSWORD }).expect(200);
+      const secondCookie = (secondLogin.headers["set-cookie"] as unknown as string[])[0].split(";")[0];
+      expect(secondCookie).not.toBe(cookie);
+      const first = await connect(cookie);
+      const otherTab = await connect(cookie);
+      const separateSession = await connect(secondCookie);
+      const disconnectedFirst = once(first, "session-revoked");
+      const disconnectedOther = once(otherTab, "session-revoked");
+      await http.post("/api/v1/auth/logout")
+        .set("Origin", "http://localhost:3000")
+        .set("Cookie", cookie).expect(200);
+      await Promise.all([disconnectedFirst, disconnectedOther]);
+      await http.get("/api/v1/auth/me").set("Cookie", cookie).expect(401);
+      await http.get("/api/v1/auth/me").set("Cookie", secondCookie).expect(200);
+      expect(separateSession.connected).toBe(true);
+      await expect(connect(cookie)).rejects.toThrow("Not authenticated");
+    });
+
+    it("refuses a third-party match while the same account is already matched", async () => {
+      const { cookie } = await loginAs();
+      const first = await connect(cookie);
+      const secondTab = await connect(cookie);
+      const partner = await connect((await loginAs()).cookie);
+      const waiting = once(first, "waiting");
+      first.emit("find-partner");
+      await waiting;
+      const matched = once(first, "matched");
+      const matchedPartner = once(partner, "matched");
+      partner.emit("find-partner");
+      await Promise.all([matched, matchedPartner]);
+      const busy = once(secondTab, "debate-already-active");
+      secondTab.emit("find-partner");
+      await busy;
+      const partnerLeft = once(partner, "peer-left");
+      first.emit("leave");
+      await partnerLeft;
+      const secondWaiting = once(secondTab, "waiting");
+      secondTab.emit("find-partner");
+      await secondWaiting;
     });
 
     it("find-partner is refused until the rules are accepted", async () => {

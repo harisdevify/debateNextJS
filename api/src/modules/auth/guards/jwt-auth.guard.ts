@@ -25,6 +25,7 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync<TokenPayload>(token);
       if (!Number.isInteger(payload.id))
         throw new Error('Invalid token subject');
+      await this.access.requireValidToken(token);
       request.user = { id: payload.id };
 
     } catch {

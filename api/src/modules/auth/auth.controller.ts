@@ -6,11 +6,12 @@ import {
   HttpStatus,
   Patch,
   Post,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { createHmac } from 'node:crypto';
 import { AuthService } from './auth.service';
 import {
@@ -66,7 +67,11 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthOriginGuard)
-  logout(@Res({ passthrough: true }) response: Response) {
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    await this.authService.logout(request.cookies?.accessToken as string | undefined);
     response.clearCookie('accessToken', this.cookieOptions());
     return { message: 'Logged out successfully!' };
   }
