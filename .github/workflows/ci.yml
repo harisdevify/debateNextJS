@@ -113,6 +113,8 @@ jobs:
       - name: Prepare disposable PostgreSQL schema
         working-directory: api
         run: npx prisma migrate deploy
+      - name: Build stable NestJS server for browser tests
+        run: npm --prefix api run build
       - name: Run real browser journeys with fake media
         run: npm --prefix e2e test
       - name: Upload Playwright failure diagnostics

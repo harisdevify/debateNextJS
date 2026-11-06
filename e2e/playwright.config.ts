@@ -32,7 +32,7 @@ export default defineConfig({
   }],
   webServer: [
     {
-      command: 'npm --prefix api run dev',
+      command: 'node api/dist/main.js',
       cwd: root,
       url: `${backend}/api/v1/health`,
       timeout: 120_000,

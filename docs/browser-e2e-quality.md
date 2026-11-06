@@ -13,10 +13,11 @@ npm install --prefix e2e
 npm --prefix e2e exec -- playwright install chromium
 # Point DATABASE_URL to a dedicated test database.
 npm --prefix api exec -- prisma migrate deploy
+npm --prefix api run build
 npm --prefix e2e test
 ```
 
-Set `DATABASE_URL`, `JWT_SECRET` and `CLIENT_URL=http://localhost:3000` in the shell before the last two commands. Playwright automatically starts and stops NestJS on 8800 and Next.js on 3000; it reuses already-running local servers outside CI, so stop your development instances if you need exact fixture parity.
+Set `DATABASE_URL`, `JWT_SECRET` and `CLIENT_URL=http://localhost:3000` in the shell before the last two commands. Playwright automatically starts and stops the built NestJS server on 8800 and Next.js on 3000; it reuses already-running local servers outside CI, so stop your development instances if you need exact fixture parity.
 
 The GitHub Actions `browser-e2e` job provisions a fresh PostgreSQL container, performs migrations, and runs Chromium with `--use-fake-device-for-media-stream` and `--use-fake-ui-for-media-stream`. Screenshots, Playwright traces and HTML reports upload on failure. Only synthetic accounts are created. Tests do not use real cameras or permission dialogs.
 
