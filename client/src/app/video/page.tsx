@@ -1,5 +1,8 @@
 'use client';
 import { ChatInputRow } from '@/components/debate/ChatInputRow';
+import { DebateSetup } from '@/components/debate/DebateSetup';
+import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
+import type { DebatePreferences } from '@/types';
 import { BlockDialog } from '@/components/debate/BlockDialog';
 import { ReportDialog } from '@/components/debate/ReportDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,7 +72,7 @@ function ChatBody({ msgs }: { msgs: ChatMessage[] }) {
 
 /* ── Chat Input ────────────────────────────── */
 /* ── Main Page ─────────────────────────────── */
-function DebateRoom() {
+function DebateRoom({ preferences, onChangePreferences }: { preferences: DebatePreferences; onChangePreferences: () => void }) {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
   const router = useRouter();
@@ -85,7 +88,7 @@ function DebateRoom() {
     toggleCamera,
     micOn,
     camOn,
-  } = useDebateRoom(localRef, remoteRef);
+  } = useDebateRoom(localRef, remoteRef, preferences);
 
   const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
@@ -128,6 +131,10 @@ function DebateRoom() {
             className={`flex-1 flex flex-col gap-3.5 p-4.5 min-w-0 transition-all duration-300
               ${chatOpen ? 'blur-sm brightness-50 pointer-events-none' : ''}`}
           >
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
+              <span className="truncate">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
+              <button onClick={onChangePreferences} className="shrink-0 font-semibold text-primary hover:underline">Change preferences</button>
+            </div>
             {/* VIDEO GRID */}
             <div
               className="grid grid-cols-2 gap-3.5 flex-1 min-h-0
@@ -426,5 +433,17 @@ export default function VideoPage() {
   }, [loading, user, accepted, router]);
 
   if (loading || !user || !accepted) return null;
-  return <DebateRoom />;
+  return <AuthenticatedDebate />;
+}
+
+function AuthenticatedDebate() {
+  const [preferences, setPreferences] = useState<DebatePreferences | null>(null);
+  const [lastPreferences, setLastPreferences] = useState<DebatePreferences>(DEFAULT_DEBATE_PREFERENCES);
+  if (!preferences) {
+    return <DebateSetup initial={lastPreferences} onStart={(selected) => {
+      setLastPreferences(selected);
+      setPreferences(selected);
+    }} />;
+  }
+  return <DebateRoom preferences={preferences} onChangePreferences={() => setPreferences(null)} />;
 }

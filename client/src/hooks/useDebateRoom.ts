@@ -1,7 +1,8 @@
 "use client";
 import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
-import type { ChatMessage, DebateStatus, MatchedPayload } from "@/types";
+import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences } from "@/types";
+import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
   useCallback,
   useEffect,
@@ -22,6 +23,7 @@ interface Signal<T> {
 export function useDebateRoom(
   localVideoRef: RefObject<HTMLVideoElement | null>,
   remoteVideoRef: RefObject<HTMLVideoElement | null>,
+  preferences: DebatePreferences = DEFAULT_DEBATE_PREFERENCES,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -84,7 +86,7 @@ export function useDebateRoom(
       if (!cancelled && !searching && streamRef.current && socket.connected) {
         searching = true;
         setStatus("searching");
-        socket.emit("find-partner");
+        socket.emit("find-partner", preferences);
       }
     };
     socket.on("connect", start);
@@ -289,7 +291,7 @@ export function useDebateRoom(
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [closePeer, localVideoRef, remoteVideoRef]);
+  }, [closePeer, localVideoRef, remoteVideoRef, preferences]);
   const findNext = useCallback(async () => {
     const socket = socketRef.current;
     if (!socket?.connected || !streamRef.current) {
@@ -314,11 +316,11 @@ export function useDebateRoom(
         return;
       configRef.current = config.data;
       setStatus("searching");
-      socket.emit("find-partner");
+      socket.emit("find-partner", preferences);
     } catch {
       if (version === searchRef.current) setStatus("error");
     }
-  }, [closePeer]);
+  }, [closePeer, preferences]);
   const emitWithAck = useCallback(
     async (event: string, payload?: unknown): Promise<Ack> => {
       const socket = socketRef.current;

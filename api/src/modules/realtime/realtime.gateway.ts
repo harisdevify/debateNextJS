@@ -1,3 +1,7 @@
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { DebatePreferencesDto } from '../debate-setup/dto/debate-preferences.dto';
+import { DebateTopic, DebateLanguage, DebateMode } from '../debate-setup/debate-setup.constants';
 import { AccountAccessService } from '../access/account-access.service';
 import { randomUUID } from "node:crypto";
 import { RateLimitService } from "../../common/rate-limit/rate-limit.service";
@@ -25,6 +29,7 @@ type DebateSocket = Socket & {
   data: {
     user?: SocketUser;
     searchVersion?: number;
+    preferences?: DebatePreferencesDto;
     tokenHash?: string;
     matchId?: string;
     peerId?: string | null;
@@ -40,6 +45,25 @@ const MAX_CHAT_LENGTH = 1000;
 const MAX_REPORT_DETAILS = 500;
 const MAX_REPORTS_PER_DAY = 20;
 const REPORT_REASONS: string[] = Object.values(ReportReason);
+
+// Legacy clients that emit find-partner without a payload continue working.
+const DEFAULT_PREFERENCES: DebatePreferencesDto = {
+  topic: DebateTopic.RELIGION,
+  language: DebateLanguage.ENGLISH,
+  mode: DebateMode.FRIENDLY,
+};
+
+function parsePreferences(value: unknown): DebatePreferencesDto | null {
+  if (value === undefined) return { ...DEFAULT_PREFERENCES };
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const dto = plainToInstance(DebatePreferencesDto, value);
+  const errors = validateSync(dto, { whitelist: true, forbidNonWhitelisted: true });
+  return errors.length === 0 ? dto : null;
+}
+
+function compatible(a: DebatePreferencesDto, b: DebatePreferencesDto): boolean {
+  return a.topic === b.topic && a.language === b.language && a.mode === b.mode;
+}
 
 function readCookie(
   header: string | undefined,
@@ -156,7 +180,7 @@ export class RealtimeGateway
         client.disconnect(true);
       });
     });
-    client.on("find-partner", () => void this.findPartner(client));
+    client.on("find-partner", (preferences?: unknown) => void this.findPartner(client, preferences));
     client.on(
       "report-partner",
       (payload: unknown, ack?: unknown) =>
@@ -193,11 +217,17 @@ export class RealtimeGateway
     this.leaveDebate(client);
   }
 
-  private async findPartner(socket: DebateSocket) {
+  private async findPartner(socket: DebateSocket, input: unknown) {
     const user = socket.data.user;
     if (!user) return;
     this.leaveDebate(socket);
     const version = socket.data.searchVersion;
+    const preferences = parsePreferences(input);
+    if (!preferences) {
+      socket.emit('search-error', { message: 'Select a valid topic, language and mode.' });
+      return;
+    }
+    socket.data.preferences = preferences;
 
     try {
       if (
@@ -253,6 +283,8 @@ export class RealtimeGateway
       if (candidateId === undefined || candidateId === user.id) continue; // never match yourself (two tabs)
       if (mine.has(candidateId) || candidate.data.blocked?.has(user.id))
         continue; // blocked either way
+      if (!candidate.data.preferences || !compatible(preferences, candidate.data.preferences))
+        continue; // keep incompatible users waiting in FIFO order
       partner = candidate;
       this.queue.splice(i, 1);
       break;
@@ -271,11 +303,13 @@ export class RealtimeGateway
     partner.data.lastPeerUserId = user.id;
     partner.emit("matched", {
       matchId,
+      preferences,
       initiator: true,
       peer: { fullname: user.fullname },
     });
     socket.emit("matched", {
       matchId,
+      preferences,
       initiator: false,
       peer: { fullname: partner.data.user?.fullname ?? "" },
     });
