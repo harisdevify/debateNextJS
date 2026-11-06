@@ -33,6 +33,7 @@ export interface LoginCredentials {
 export type DebateStatus =
   | 'starting'
   | 'searching'
+  | 'idle'
   | 'connecting'
   | 'reconnecting'
   | 'connected'

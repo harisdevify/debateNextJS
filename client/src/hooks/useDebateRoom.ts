@@ -25,6 +25,7 @@ export function useDebateRoom(
   localVideoRef: RefObject<HTMLVideoElement | null>,
   remoteVideoRef: RefObject<HTMLVideoElement | null>,
   preferences: DebatePreferences = DEFAULT_DEBATE_PREFERENCES,
+  initialStream: MediaStream | null = null,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -35,6 +36,12 @@ export function useDebateRoom(
   const recoveryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configRef = useRef<RTCConfiguration>({ iceServers: [] });
   const searchRef = useRef(0);
+  const searchingRef = useRef(false);
+  const pausedRef = useRef(false);
+  const awaitingReconnectRef = useRef(false);
+  const effectVersionRef = useRef(0);
+  const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
+  const [searchConfirmed, setSearchConfirmed] = useState(false);
   const micWantedRef = useRef(true);
   const maySpeakRef = useRef(preferences.mode !== 'formal');
   const [formalState, setFormalState] = useState<FormalDebateState | null>(null);
@@ -68,10 +75,10 @@ export function useDebateRoom(
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, [remoteVideoRef]);
   useEffect(() => {
+    const effectVersion = ++effectVersionRef.current;
     const socket = createSocket();
     socketRef.current = socket;
     let cancelled = false;
-    let searching = false;
     let offerer = false;
     let restartAttempted = false;
     const active = (pc: RTCPeerConnection, id: string) =>
@@ -125,8 +132,10 @@ export function useDebateRoom(
       }
     };
     const start = () => {
-      if (!cancelled && !searching && streamRef.current && socket.connected) {
-        searching = true;
+      if (!cancelled && !pausedRef.current && !searchingRef.current && streamRef.current && socket.connected) {
+        searchingRef.current = true;
+        setSearchConfirmed(false);
+        setSearchStartedAt(Date.now());
         setStatus("searching");
         socket.emit("find-partner", preferences);
       }
@@ -150,12 +159,15 @@ export function useDebateRoom(
         setMicOn(false);
       }
       searchRef.current++;
-      searching = false;
+      searchingRef.current = false;
+      setSearchStartedAt(null);
+      setSearchConfirmed(false);
       closePeer();
-      setStatus("reconnecting");
+      setStatus(pausedRef.current ? "idle" : "reconnecting");
     });
     socket.on("account-restricted", ({ message }: { message: string }) => {
-      searching = true;
+      searchingRef.current = false;
+      pausedRef.current = true;
       socket.removeAllListeners('disconnect');
       closePeer();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -165,7 +177,12 @@ export function useDebateRoom(
       socket.disconnect();
     });
     socket.on("moderation-warning", ({ message }: { message: string }) => toast.warning(message));
-    socket.on("waiting", () => setStatus("searching"));
+    socket.on("waiting", () => {
+      if (searchingRef.current && !pausedRef.current) {
+        setSearchConfirmed(true);
+        setStatus("searching");
+      }
+    });
     socket.on("formal-state", (state: FormalDebateState) => {
       if (cancelled || state.matchId !== matchRef.current) return;
       maySpeakRef.current = state.isSpeaker && !state.completed;
@@ -183,6 +200,7 @@ export function useDebateRoom(
       const track = streamRef.current?.getAudioTracks()[0];
       if (track) track.enabled = false;
       setMicOn(false);
+      awaitingReconnectRef.current = true;
       closePeer();
       setStatus("reconnecting");
     });
@@ -197,12 +215,15 @@ export function useDebateRoom(
       setFormalState((previous) => previous ? { ...previous, completed: true } : null);
     });
     socket.on("debate-already-active", () => {
-      searching = false;
+      searchingRef.current = false;
+      setSearchStartedAt(null);
+      setSearchConfirmed(false);
       setStatus("error");
       toast.error("You already have a debate open in another tab. Leave it before searching here.");
     });
     socket.on("session-revoked", () => {
-      searching = true;
+      searchingRef.current = false;
+      pausedRef.current = true;
       socket.removeAllListeners("disconnect");
       closePeer();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -215,6 +236,15 @@ export function useDebateRoom(
       "matched",
       async ({ matchId, initiator, peer }: MatchedPayload) => {
         if (cancelled) return;
+        if (pausedRef.current || (!searchingRef.current && !awaitingReconnectRef.current)) {
+          // A delayed match after cancelling must not start a call.
+          socket.emit("leave");
+          return;
+        }
+        searchingRef.current = false;
+        awaitingReconnectRef.current = false;
+        setSearchStartedAt(null);
+        setSearchConfirmed(false);
         closePeer();
         offerer = initiator;
         restartAttempted = false;
@@ -325,14 +355,25 @@ export function useDebateRoom(
       },
     );
     socket.on("rules-required", () => {
+      searchingRef.current = false;
+      setSearchStartedAt(null);
+      setSearchConfirmed(false);
       setStatus("error");
       toast.error("Please accept the rules first.");
     });
-    socket.on("search-error", () => {
+    socket.on("search-error", ({ message }: { message?: string } = {}) => {
+      if (pausedRef.current) return;
+      searchingRef.current = false;
+      setSearchStartedAt(null);
+      setSearchConfirmed(false);
       setStatus("error");
-      toast.error("Could not search. Wait a few seconds and try again.");
+      toast.error(message || "Could not search. Wait a few seconds and try again.");
     });
     socket.on("peer-left", () => {
+      awaitingReconnectRef.current = false;
+      searchingRef.current = false;
+      setSearchStartedAt(null);
+      setSearchConfirmed(false);
       if (preferences.mode === 'formal') {
         maySpeakRef.current = false;
         const track = streamRef.current?.getAudioTracks()[0];
@@ -380,7 +421,7 @@ export function useDebateRoom(
         configRef.current = config.data;
         let stream: MediaStream;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          stream = initialStream ?? await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         } catch (error) {
           if (!cancelled) {
             setStatus("error");
@@ -389,7 +430,8 @@ export function useDebateRoom(
           return;
         }
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          // The strict-mode effect replay may reuse an already handed-off stream.
+          if (stream !== initialStream) stream.getTracks().forEach((t) => t.stop());
           return;
         }
         streamRef.current = stream;
@@ -420,14 +462,35 @@ export function useDebateRoom(
     })();
     return () => {
       cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => { t.onended = null; t.stop(); });
-      streamRef.current = null;
+      const stream = streamRef.current;
+      // Defer release one microtask: React dev StrictMode replays effects on
+      // mount and must not destroy a transferred stream before setup resumes.
+      if (stream) {
+        stream.getTracks().forEach((track) => { track.onended = null; });
+        queueMicrotask(() => {
+          if (effectVersionRef.current !== effectVersion) return;
+          stream.getTracks().forEach((track) => track.stop());
+          if (streamRef.current === stream) streamRef.current = null;
+        });
+      }
       closePeer();
       socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [closePeer, localVideoRef, remoteVideoRef, preferences]);
+  }, [closePeer, localVideoRef, remoteVideoRef, preferences, initialStream]);
+  const cancelSearch = useCallback(() => {
+    pausedRef.current = true;
+    awaitingReconnectRef.current = false;
+    searchingRef.current = false;
+    searchRef.current++;
+    socketRef.current?.emit("leave");
+    closePeer();
+    setSearchStartedAt(null);
+    setSearchConfirmed(false);
+    setStatus("idle");
+  }, [closePeer]);
+
   const findNext = useCallback(async () => {
     const socket = socketRef.current;
     if (!socket?.connected || !streamRef.current) {
@@ -437,6 +500,9 @@ export function useDebateRoom(
       return;
     }
     const version = ++searchRef.current;
+    pausedRef.current = false;
+    awaitingReconnectRef.current = false;
+    searchingRef.current = false;
     socket.emit("leave");
     closePeer();
     setMessages([]);
@@ -455,10 +521,17 @@ export function useDebateRoom(
       )
         return;
       configRef.current = config.data;
+      searchingRef.current = true;
+      setSearchStartedAt(Date.now());
+      setSearchConfirmed(false);
       setStatus("searching");
       socket.emit("find-partner", preferences);
     } catch {
-      if (version === searchRef.current) setStatus("error");
+      if (version === searchRef.current) {
+        searchingRef.current = false;
+        setSearchStartedAt(null);
+        setStatus("error");
+      }
     }
   }, [closePeer, preferences]);
   const emitWithAck = useCallback(
@@ -557,6 +630,10 @@ export function useDebateRoom(
   };
   return {
     status,
+    searchStartedAt,
+    searchConfirmed,
+    cancelSearch,
+    retrySearch: findNext,
     peerName,
     messages,
     sendMessage,
