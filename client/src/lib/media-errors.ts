@@ -23,7 +23,7 @@ export function mediaErrorMessage(error: unknown): string {
 }
 
 export function mediaEnvironmentError(): string | null {
-  if (typeof window !== 'undefined' && !window.isSecureContext)
+  if (typeof window !== 'undefined' && window.isSecureContext === false)
     return 'Camera and microphone require HTTPS (or localhost). Open the secure site and try again.';
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia)
     return 'Your browser does not support camera and microphone access. Use a modern browser over HTTPS.';
