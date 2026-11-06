@@ -1,239 +1,104 @@
 import {
-  ArrowRight,
-  MessageCircle,
-  ShieldCheck,
-  Users,
-  Video,
-  Zap,
+  ArrowRight, AudioLines, Check, Clock3, Headphones, Languages,
+  MessageSquareText, ShieldCheck, SlidersHorizontal, UsersRound, Video
 } from 'lucide-react';
 import Link from 'next/link';
 import { DebateCTA } from '@/components/debate/DebateCTA';
 
-const features = [
-  {
-    icon: Video,
-    title: 'Live Video Debates',
-    desc: 'Real-time peer-to-peer video sessions powered by WebRTC. Peer-to-peer media with supported ICE/STUN/TURN connectivity.',
-    stat: 'WebRTC',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Live Text Chat',
-    desc: 'Instant messaging with reporting and blocking controls. Stay on topic, stay respectful.',
-    stat: 'Real-time',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Moderated Sessions',
-    desc: 'Reporting and account moderation help maintain platform rules.',
-    stat: 'Monitored',
-  },
+const steps = [
+  { icon: SlidersHorizontal, title: 'Choose your format', text: 'Pick a topic, language, and friendly or formal mode.' },
+  { icon: UsersRound, title: 'Connect one to one', text: 'Match with someone who chose compatible preferences.' },
+  { icon: ShieldCheck, title: 'Discuss with respect', text: 'Stay in control with reporting and blocking tools.' },
 ];
 
-const stats = [
-  { icon: Users, value: '1-to-1', label: 'Live Discussions' },
-  { icon: Zap, value: '2', label: 'Languages' },
-  { icon: ShieldCheck, value: '24/7', label: 'Report Access' },
-];
+function RoomPreview() {
+  return (
+    <div aria-label="Illustration of the debate room interface" className="relative mx-auto w-full max-w-[550px] lg:mx-0">
+      <div className="pointer-events-none absolute -inset-5 rounded-[32px] border border-primary/10 sm:-inset-9" />
+      <div className="relative overflow-hidden rounded-[25px] border border-white/15 bg-[#101917] shadow-[0_32px_100px_rgba(0,0,0,0.55)]">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="size-2 rounded-full bg-primary" /> Debate room
+            <span className="ml-1 text-[10px] font-medium uppercase tracking-widest text-white/45">Preview</span>
+          </div>
+          <span className="rounded-md bg-white/5 px-2.5 py-1 text-[11px] text-white/55">Formal · English</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4">
+          <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#172520] sm:aspect-square">
+            <div className="grid size-14 place-items-center rounded-full border border-primary/20 bg-primary/10 text-primary"><AudioLines size={26} /></div>
+            <span className="mt-4 text-xs font-semibold text-white/85">Your partner</span>
+            <span className="mt-1 text-[10px] text-white/45">Connected</span>
+          </div>
+          <div className="flex aspect-[4/5] flex-col items-center justify-center rounded-2xl border border-primary/25 bg-[#122320] sm:aspect-square">
+            <div className="grid size-14 place-items-center rounded-full border border-white/10 bg-white/5 text-white/80"><Video size={25} /></div>
+            <span className="mt-4 text-xs font-semibold text-white/85">You</span>
+            <span className="mt-1 text-[10px] text-white/45">Camera preview</span>
+          </div>
+        </div>
+        <div className="mx-4 mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div><p className="text-[10px] uppercase tracking-widest text-primary">Speaking turn</p><p className="mt-0.5 text-xs font-medium text-white">A structured conversation</p></div>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-white/70"><Clock3 size={14} /> Timed</span>
+        </div>
+        <div className="flex items-center justify-center gap-3 border-t border-white/10 bg-[#0a1411] p-4">
+          <span className="grid size-10 place-items-center rounded-full bg-white/10 text-white/80"><Headphones size={17} /></span>
+          <span className="grid size-10 place-items-center rounded-full bg-white/10 text-white/80"><MessageSquareText size={17} /></span>
+          <span className="flex h-10 items-center gap-2 rounded-full bg-primary/15 px-4 text-xs font-semibold text-primary"><Check size={14} /> You&apos;re in control</span>
+        </div>
+      </div>
+      <p className="mt-5 text-center text-[11px] text-white/40">Illustrative room preview · Not a live session</p>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden max-container">
-      {/* ── HERO ── */}
-      <section className="relative flex items-center justify-center text-center px-4 sm:px-5 min-h-[calc(100svh-64px)]">
-        {/* Background layers */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* dot grid */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                'radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-            }}
-          />
-          {/* center glow */}
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(0,191,166,0.18) 0%, transparent 65%)',
-            }}
-          />
-          {/* top-right accent */}
-          <div
-            className="absolute -top-20 -right-20 w-[400px] h-[400px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(0,191,166,0.08) 0%, transparent 70%)',
-            }}
-          />
-          {/* bottom-left accent */}
-          <div
-            className="absolute -bottom-20 -left-20 w-[300px] h-[300px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(0,191,166,0.06) 0%, transparent 70%)',
-            }}
-          />
+    <div className="min-w-0 overflow-hidden bg-background">
+      <section className="relative isolate overflow-hidden border-b border-white/10">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_85%_25%,rgba(0,217,189,0.07),transparent_60%)]" />
+        <div className="mx-auto grid w-full max-w-[1240px] items-center gap-12 px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:min-h-[680px] lg:grid-cols-[1.04fr_0.96fr] lg:gap-20 lg:py-24">
+          <div className="relative z-10 max-w-2xl">
+            <div className="mb-8 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-primary"><span className="h-px w-8 bg-primary" /> A better place to disagree</div>
+            <h1 className="text-[clamp(3rem,6vw,5.8rem)] font-semibold leading-[1.02] tracking-[-0.055em] text-white">Good debates<br />begin with <span className="text-primary">respect.</span></h1>
+            <p className="mt-7 max-w-xl text-base leading-7 text-white/65 sm:text-lg sm:leading-8">
+              Thoughtful Islamic discussions, real people, and room for different perspectives.
+              Choose what matters to you, then join a one-to-one video conversation.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <DebateCTA className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-background transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" />
+              <Link href="/rules" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/85 transition-colors hover:border-white/40 hover:bg-white/5">Read guidelines <ArrowRight size={16} /></Link>
+            </div>
+            <div className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-white/12 pt-6">
+              <div><p className="text-lg font-semibold text-white">1:1</p><p className="mt-1 text-xs text-white/50">Private matching</p></div>
+              <div><p className="text-lg font-semibold text-white">2 modes</p><p className="mt-1 text-xs text-white/50">Friendly or formal</p></div>
+              <div><p className="text-lg font-semibold text-white">2 languages</p><p className="mt-1 text-xs text-white/50">Urdu and English</p></div>
+            </div>
+          </div>
+          <RoomPreview />
         </div>
+      </section>
 
-        <div className="relative z-10 max-w-[860px] mx-auto flex flex-col items-center gap-5 py-16 sm:gap-6 sm:py-24 stagger">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,191,166,0.3)] bg-[rgba(0,191,166,0.08)] text-primary text-sm font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Islamic Debate Platform — Live Now
+      <section id="features" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
+        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">How it works</p>
+            <h2 className="mt-5 max-w-md text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">Less noise.<br />More meaningful conversation.</h2>
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/60">Focus on the person and the discussion, not on complicated controls.</p>
+            <Link href="/rules" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">Community guidelines <ArrowRight size={15} /></Link>
           </div>
-
-          {/* Heading */}
-          <h1 className="text-[clamp(2.4rem,5.5vw,4rem)] font-black leading-[1.15] text-white tracking-tight">
-            A Safe Space for{' '}
-            <span
-              className="relative inline-block text-primary"
-              style={{ textShadow: '0 0 40px rgba(0,191,166,0.4)' }}
-            >
-              Islamic Discussions
-            </span>
-          </h1>
-
-          {/* Subtext */}
-          <p className="text-[1.1rem] text-white/50 max-w-[560px] leading-relaxed">
-            Engage in respectful, guided debates through live video and text —
-            grounded in Islamic values, powered by modern technology.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-3 justify-center mt-2">
-            <DebateCTA
-              className="pressable group flex items-center gap-2 px-7 py-3.5 text-[1rem] font-bold rounded-xl
-                         bg-primary text-[#0a0a0a]
-                         shadow-[0_0_0_0_rgba(0,191,166,0.5)]
-                         transition-all duration-300
-                         hover:shadow-[0_0_30px_rgba(0,191,166,0.45)]
-                         hover:bg-[#00d4b8] hover:-translate-y-0.5"
-            />
-            <a
-              href="#features"
-              className="flex items-center gap-2 px-7 py-3.5 text-[1rem] font-semibold rounded-xl
-                         bg-white/5 text-white border border-white/10
-                         transition-all duration-300
-                         hover:bg-white/10 hover:border-white/20 hover:-translate-y-0.5"
-            >
-              Learn More
-            </a>
-          </div>
-
-          {/* Stats Row */}
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-5 mt-8 pt-8 sm:mt-10 sm:pt-10 border-t border-white/[0.07] w-full stagger">
-            {stats.map(({ icon: Icon, value, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-1.5 text-primary">
-                  <Icon size={16} />
-                  <span className="text-2xl font-black text-white">
-                    {value}
-                  </span>
-                </div>
-                <span className="text-white/40 text-sm">{label}</span>
+          <div className="divide-y divide-white/10 border-y border-white/10">
+            {steps.map(({ icon: Icon, title, text }, index) => (
+              <div key={title} className="grid gap-3 py-7 sm:grid-cols-[58px_1fr] sm:gap-5">
+                <div className="flex items-center gap-3"><span className="text-[11px] font-mono text-white/30">0{index + 1}</span><Icon size={21} className="text-primary" aria-hidden="true" /></div>
+                <div><h3 className="text-lg font-semibold text-white">{title}</h3><p className="mt-2 max-w-lg text-sm leading-7 text-white/60">{text}</p></div>
               </div>
             ))}
           </div>
         </div>
       </section>
-
-      {/* ── FEATURES ── */}
-      <section id="features" className="relative px-4 py-16 sm:px-6 sm:py-24">
-        {/* subtle bg */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-          }}
-        />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(to bottom, transparent, rgba(0,191,166,0.03), transparent)',
-          }}
-        />
-
-        <div className="relative z-10 max-w-[1100px] mx-auto">
-          {/* Section label */}
-          <div className="text-center mb-16">
-            <span className="text-primary text-sm font-semibold uppercase tracking-[0.15em]">
-              Why Choose Us
-            </span>
-            <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-black text-white mt-3 leading-tight">
-              Everything you need for a great debate
-            </h2>
-            <p className="text-white/40 mt-3 max-w-[480px] mx-auto text-[0.95rem]">
-              Built from the ground up for respectful, structured Islamic
-              discourse.
-            </p>
-          </div>
-
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger">
-            {features.map(({ icon: Icon, title, desc, stat }) => (
-              <div
-                key={title}
-                className="group relative flex flex-col gap-5 p-7 rounded-2xl
-                           bg-[rgba(10,24,22,0.8)] border border-white/[0.07]
-                           transition-all duration-500
-                           hover:border-[rgba(0,191,166,0.35)]
-                           hover:bg-[rgba(10,24,22,0.95)]
-                           hover:-translate-y-2
-                           hover:shadow-[0_20px_50px_rgba(0,191,166,0.1)]"
-              >
-                {/* top-right stat badge */}
-                <span className="absolute top-5 right-5 text-[0.7rem] font-bold uppercase tracking-widest text-primary/50 group-hover:text-primary transition-colors duration-300">
-                  {stat}
-                </span>
-
-                {/* Icon */}
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center
-                                bg-[rgba(0,191,166,0.1)] border border-[rgba(0,191,166,0.15)]
-                                transition-all duration-300
-                                group-hover:bg-[rgba(0,191,166,0.2)] group-hover:border-[rgba(0,191,166,0.35)]"
-                >
-                  <Icon size={22} className="stroke-primary" />
-                </div>
-
-                {/* Text */}
-                <div>
-                  <h3 className="text-white font-bold text-[1.1rem] mb-2">
-                    {title}
-                  </h3>
-                  <p className="text-white/45 text-[0.9rem] leading-relaxed">
-                    {desc}
-                  </p>
-                </div>
-
-                {/* bottom accent line */}
-                <div className="absolute bottom-0 left-7 right-7 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom CTA */}
-          <div className="text-center mt-16">
-            <p className="text-white/30 text-sm mb-5">
-              Ready to have a respectful discussion?
-            </p>
-            <Link
-              href="/rules"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold
-                         border border-[rgba(0,191,166,0.25)] text-primary
-                         transition-all duration-300
-                         hover:bg-[rgba(0,191,166,0.08)] hover:border-[rgba(0,191,166,0.5)]"
-            >
-              Read the Rules First
-              <ArrowRight size={15} />
-            </Link>
-          </div>
+      <section className="border-t border-white/10 bg-[#0c1512]">
+        <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-5 py-12 sm:px-8 md:flex-row md:items-center md:justify-between">
+          <div><div className="flex items-center gap-2 text-primary"><Languages size={19} /><span className="text-xs font-semibold uppercase tracking-[0.17em]">Choose your conversation</span></div><h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">Ready to be heard?</h2></div>
+          <DebateCTA className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-background transition-colors hover:bg-primary-hover" />
         </div>
       </section>
     </div>

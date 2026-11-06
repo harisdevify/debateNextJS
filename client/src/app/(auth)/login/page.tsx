@@ -18,8 +18,8 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 const highlights = [
-  { icon: ShieldCheck, text: 'Fully moderated sessions' },
-  { icon: Users, text: '2,400+ active debaters' },
+  { icon: ShieldCheck, text: 'Report and block for safer discussions' },
+  { icon: Users, text: 'Matching based on shared interests' },
   { icon: Zap, text: 'Join a debate in seconds' },
 ];
 
@@ -56,7 +56,7 @@ export default function LoginPage() {
   if (authLoading || user) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
    return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
+      <section className="relative flex-1 flex items-center justify-center px-4 py-12 sm:px-6 sm:py-20">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -83,7 +83,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="relative z-10 w-full max-w-[860px] grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+        <div className="relative z-10 w-full max-w-[1080px] grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 items-center">
           {/* form panel enters second, slightly later */}
           {/* ── LEFT PANEL ── */}
           <div className="hidden lg:flex flex-col gap-8 pr-6 stagger">
@@ -95,7 +95,7 @@ export default function LoginPage() {
               >
                 Welcome Back
               </div>
-              <h2 className="text-[clamp(2rem,3.5vw,2.8rem)] font-black text-white leading-[1.15] mb-4">
+              <h2 className="text-[clamp(2.8rem,4.5vw,4.6rem)] font-semibold tracking-[-0.045em] text-white leading-[1.08] mb-4">
                 Continue the{' '}
                 <span
                   className="text-primary"
@@ -104,7 +104,7 @@ export default function LoginPage() {
                   Conversation.
                 </span>
               </h2>
-              <p className="text-white/40 text-[0.95rem] leading-relaxed max-w-[340px]">
+              <p className="text-white/65 text-base leading-7 max-w-[340px]">
                 Log back in and pick up where you left off. Your debates, your
                 profile, your voice — all waiting for you.
               </p>
@@ -138,7 +138,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── RIGHT PANEL — FORM ── */}
-          <div className="rounded-2xl border border-white/[0.1] bg-[rgba(10,24,22,0.85)] p-5 shadow-xl sm:p-8 backdrop-blur-sm fade-up d-2">
+          <div className="rounded-[24px] border border-white/15 bg-[#111e1a] p-6 shadow-[0_30px_80px_rgba(0,0,0,.32)] sm:p-9 backdrop-blur-sm fade-up d-2">
             <div className="mb-7">
               <h3 className="text-white font-black text-[1.5rem]">Login</h3>
               <p className="text-white/35 text-sm mt-1">

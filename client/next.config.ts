@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 
 // All browser HTTP requests use the frontend origin. The rewrite forwards
 // requests to NestJS server-side, so the auth cookie remains first-party.
@@ -10,6 +11,7 @@ const apiTarget = (
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  turbopack: { root: path.resolve(__dirname) },
   async rewrites() {
     return [
       {

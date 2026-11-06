@@ -149,8 +149,8 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             className={`flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-3 transition-all duration-300 sm:p-4 lg:gap-3.5
               ${chatOpen ? 'blur-sm brightness-50 pointer-events-none' : ''}`}
           >
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/65">
-              <span className="min-w-0 flex-1 truncate">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/12 bg-[#111b19] px-4 py-3 text-xs text-white/70">
+              <span className="min-w-0 flex-1 truncate font-semibold tracking-wide text-white/75">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
               <button type="button" onClick={onChangePreferences} className="min-h-10 shrink-0 rounded-lg px-2 font-semibold text-primary hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40">Change preferences</button>
             </div>
             {preferences.mode === 'formal' && formalState && status !== 'completed' && (
@@ -167,12 +167,12 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             )}
             {/* VIDEO GRID */}
             <div
-              className="grid min-h-[min(58svh,460px)] min-w-0 flex-1 grid-cols-1 grid-rows-2 gap-2.5 sm:min-h-[420px] sm:grid-cols-2 sm:grid-rows-1 sm:gap-3 lg:min-h-0"
+              className="grid min-h-[min(58svh,460px)] min-w-0 flex-1 grid-cols-1 grid-rows-2 gap-3 sm:min-h-[420px] sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]"
             >
               {/* Remote tile */}
               <div
-                className="relative min-h-0 overflow-hidden rounded-2xl bg-[#0f1219]
-                              border border-white/7 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+                className="relative min-h-0 overflow-hidden rounded-[22px] bg-[#101b18]
+                              border border-white/15 shadow-[0_18px_48px_rgba(0,0,0,0.4)]"
               >
                 <video
                   ref={remoteRef}
@@ -245,9 +245,9 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
 
               {/* Local tile — teal glow ring */}
               <div
-                className="relative min-h-0 overflow-hidden rounded-2xl bg-[#0f1219]
+                className="relative min-h-0 overflow-hidden rounded-[22px] bg-[#101b18]
                               border border-white/7
-                              shadow-[0_0_0_2px_rgba(0,229,192,0.2),0_12px_40px_rgba(0,0,0,0.55)]"
+                              shadow-[inset_0_0_0_1px_rgba(0,217,189,0.2),0_18px_48px_rgba(0,0,0,0.4)]"
               >
                 <video
                   ref={localRef}
@@ -269,7 +269,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
             </div>
 
             {/* CONTROLS */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pb-2 pt-1">
+            <div className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#111b19] px-4 py-3 shadow-[0_12px_35px_rgba(0,0,0,.28)]">
               {/* Mic */}
               <button
                 onClick={() => {
@@ -372,7 +372,7 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
           </section>
 
           {/* ── DESKTOP CHAT ASIDE (hidden on mobile) ── */}
-          <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(32vw,340px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#0f1219] lg:flex">
+          <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(30vw,345px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#101815] lg:flex">
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4.5 py-3.5 border-b border-white/7 shrink-0">
               <div className="live-dot w-2 h-2 rounded-full bg-[#00e5c0] shadow-[0_0_9px_rgba(0,229,192,0.7)]" />
