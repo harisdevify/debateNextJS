@@ -46,6 +46,7 @@ export default defineConfig({
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
       env: {
+        PORT: '3000', // The CI job uses PORT=8800 for NestJS; never inherit it in Next.js.
         API_PROXY_TARGET: `${backend}/api/v1`,
         NEXT_PUBLIC_API_URL: `${backend}/api/v1`,
         NEXT_PUBLIC_SOCKET_URL: backend,
