@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { assertActive } from '../access/account-access.service';
+import { AccountAccessService, assertActive } from '../access/account-access.service';
 import { AcceptRulesDto } from './dto/accept-rules.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -38,7 +39,8 @@ function isPrismaError(error: unknown, code: string): boolean {
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly access: AccountAccessService
   ) {}
 
   async register(dto: RegisterDto) {
@@ -88,12 +90,25 @@ export class AuthService {
     }
 
     assertActive(user);
-    const accessToken = await this.jwtService.signAsync({ id: user.id });
+    const accessToken = await this.jwtService.signAsync({ id: user.id, jti: randomUUID() });
 
     return {
       accessToken,
       user: await this.me(user.id),
     };
+  }
+
+  async logout(token: string | undefined): Promise<void> {
+    if (!token) return;
+    let payload: { id: number; exp?: number };
+    try {
+      payload = await this.jwtService.verifyAsync<{ id: number; exp?: number }>(token);
+    } catch {
+      // Idempotent logout: invalid or expired cookies are simply cleared.
+      return;
+    }
+    if (!Number.isInteger(payload.id) || !payload.exp) return;
+    await this.access.revokeToken(payload.id, token, new Date(payload.exp * 1000));
   }
 
   async me(userId: number) {

@@ -25,6 +25,7 @@ type DebateSocket = Socket & {
   data: {
     user?: SocketUser;
     searchVersion?: number;
+    tokenHash?: string;
     matchId?: string;
     peerId?: string | null;
     /** user id of the latest partner; kept after the debate ends so it can still be reported */
@@ -93,9 +94,21 @@ export class RealtimeGateway
       }
     }
   };
-  onModuleDestroy() { this.access.events.off('moderated', this.onModerated); }
+  private readonly onSessionRevoked = ({ tokenHash }: { tokenHash: string }) => {
+    for (const raw of this.server.sockets.sockets.values()) {
+      const socket = raw as DebateSocket;
+      if (socket.data.tokenHash !== tokenHash) continue;
+      socket.emit('session-revoked');
+      socket.disconnect(true);
+    }
+  };
+  onModuleDestroy() {
+    this.access.events.off('moderated', this.onModerated);
+    this.access.events.off('session-revoked', this.onSessionRevoked);
+  }
   afterInit(server: Server) {
     this.access.events.on('moderated', this.onModerated);
+    this.access.events.on('session-revoked', this.onSessionRevoked);
     server.use(async (rawSocket, next) => {
       const socket = rawSocket as DebateSocket;
       try {
@@ -109,6 +122,7 @@ export class RealtimeGateway
         });
         if (!Number.isInteger(payload.id))
           return next(new Error("Not authenticated"));
+        await this.access.requireValidToken(token);
         const user = await this.prisma.user.findUnique({
           where: { id: payload.id },
           select: { id: true, fullname: true },
@@ -116,6 +130,7 @@ export class RealtimeGateway
         if (!user) return next(new Error("Not authenticated"));
         await this.access.requireActive(user.id);
         socket.data.user = user;
+        socket.data.tokenHash = this.access.tokenHash(token);
         socket.data.peerId = null;
         socket.data.lastPeerUserId = null;
         next();
@@ -128,7 +143,15 @@ export class RealtimeGateway
   handleConnection(client: DebateSocket) {
     // Old JWTs and reconnects cannot bypass account restrictions.
     client.use((_packet, next) => {
-      void this.access.requireActive(client.data.user!.id).then(() => next()).catch(() => {
+      void Promise.all([
+        this.access.requireActive(client.data.user!.id),
+        this.prisma.revokedToken.findUnique({
+          where: { tokenHash: client.data.tokenHash! },
+          select: { tokenHash: true },
+        }).then((revoked) => {
+          if (revoked) throw new Error('Session revoked');
+        }),
+      ]).then(() => next()).catch(() => {
         client.emit('account-restricted', { message: 'Your account cannot participate right now.' });
         client.disconnect(true);
       });
@@ -205,12 +228,24 @@ export class RealtimeGateway
     // Everything below is synchronous, so two users can never grab the same partner.
     if (socket.disconnected || version !== socket.data.searchVersion) return;
 
+    // Another tab of the same account must not already be waiting or matched.
+    const alreadyActive = Array.from(this.server.sockets.sockets.values()).some((raw) => {
+      const other = raw as DebateSocket;
+      return other.id !== socket.id &&
+        other.data.user?.id === user.id &&
+        (this.queue.includes(other.id) || !!other.data.peerId);
+    });
+    if (alreadyActive) {
+      socket.emit('debate-already-active');
+      return;
+    }
+
     const mine = socket.data.blocked ?? new Set<number>();
     let partner: DebateSocket | undefined;
     for (let i = 0; i < this.queue.length; i++) {
       const candidate = this.server.sockets.sockets.get(this.queue[i]) as
         DebateSocket | undefined;
-      if (!candidate) {
+      if (!candidate || candidate.disconnected || candidate.data.peerId) {
         this.queue.splice(i--, 1);
         continue;
       }

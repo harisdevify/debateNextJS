@@ -116,6 +116,21 @@ export function useDebateRoom(
     });
     socket.on("moderation-warning", ({ message }: { message: string }) => toast.warning(message));
     socket.on("waiting", () => setStatus("searching"));
+    socket.on("debate-already-active", () => {
+      searching = false;
+      setStatus("error");
+      toast.error("You already have a debate open in another tab. Leave it before searching here.");
+    });
+    socket.on("session-revoked", () => {
+      searching = true;
+      socket.removeAllListeners("disconnect");
+      closePeer();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setStatus("error");
+      toast.error("You have logged out. Please sign in again.");
+      socket.disconnect();
+    });
     socket.on(
       "matched",
       async ({ matchId, initiator, peer }: MatchedPayload) => {
