@@ -95,9 +95,9 @@ it("does not show connected until WebRTC connects; handles failed transport", as
     pc.connectionState = "failed";
     pc.onconnectionstatechange?.();
   });
-  expect(result.current.status).toBe("error");
-  expect(pc.close).toHaveBeenCalled();
-  expect(mocks.emit).toHaveBeenCalledWith("leave");
+  expect(result.current.status).toBe("reconnecting");
+  expect(pc.createOffer).toHaveBeenCalledWith({ iceRestart: true });
+  expect(pc.close).not.toHaveBeenCalled();
 });
 it("ignores signaling belonging to a previous partner", async () => {
   await setup();
