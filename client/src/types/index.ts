@@ -38,6 +38,7 @@ export type DebateStatus =
   | 'connected'
   | 'peer-left'
   | 'blocked'
+  | 'completed'
   | 'error';
 
 export interface ChatMessage {
@@ -50,6 +51,17 @@ export interface DebatePreferences {
   topic: 'religion' | 'science' | 'technology' | 'education' | 'everyday-life';
   language: 'ur' | 'en';
   mode: 'friendly' | 'formal';
+}
+
+export interface FormalDebateState {
+  matchId: string;
+  serverNow: number;
+  startedAt: number;
+  endsAt: number;
+  turnEndsAt: number;
+  turnNumber: number;
+  isSpeaker: boolean;
+  completed: boolean;
 }
 
 /** Error body returned by the API: { message } */

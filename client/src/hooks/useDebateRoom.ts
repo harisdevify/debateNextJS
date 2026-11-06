@@ -1,7 +1,7 @@
 "use client";
 import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
-import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences } from "@/types";
+import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences, FormalDebateState } from "@/types";
 import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
   useCallback,
@@ -33,6 +33,16 @@ export function useDebateRoom(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configRef = useRef<RTCConfiguration>({ iceServers: [] });
   const searchRef = useRef(0);
+  const micWantedRef = useRef(true);
+  const maySpeakRef = useRef(preferences.mode !== 'formal');
+  const [formalState, setFormalState] = useState<FormalDebateState | null>(null);
+  const [countdownNow, setCountdownNow] = useState(Date.now());
+  const [clockOffset, setClockOffset] = useState(0);
+  useEffect(() => {
+    if (!formalState || formalState.completed) return;
+    const timer = setInterval(() => setCountdownNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [formalState]);
   const [status, setStatus] = useState<DebateStatus>("starting");
   const [peerName, setPeerName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -101,6 +111,12 @@ export function useDebateRoom(
     });
     socket.on("disconnect", () => {
       if (cancelled) return;
+      if (preferences.mode === 'formal') {
+        maySpeakRef.current = false;
+        const track = streamRef.current?.getAudioTracks()[0];
+        if (track) track.enabled = false;
+        setMicOn(false);
+      }
       searchRef.current++;
       searching = false;
       closePeer();
@@ -118,6 +134,36 @@ export function useDebateRoom(
     });
     socket.on("moderation-warning", ({ message }: { message: string }) => toast.warning(message));
     socket.on("waiting", () => setStatus("searching"));
+    socket.on("formal-state", (state: FormalDebateState) => {
+      if (cancelled || state.matchId !== matchRef.current) return;
+      maySpeakRef.current = state.isSpeaker && !state.completed;
+      const track = streamRef.current?.getAudioTracks()[0];
+      const enabled = maySpeakRef.current && micWantedRef.current;
+      if (track) track.enabled = enabled;
+      setMicOn(enabled);
+      setFormalState(state);
+      setClockOffset(state.serverNow - Date.now());
+      setCountdownNow(Date.now());
+    });
+    socket.on("peer-reconnecting", ({ matchId }: { matchId: string }) => {
+      if (cancelled || (matchRef.current && matchId !== matchRef.current)) return;
+      maySpeakRef.current = false;
+      const track = streamRef.current?.getAudioTracks()[0];
+      if (track) track.enabled = false;
+      setMicOn(false);
+      closePeer();
+      setStatus("reconnecting");
+    });
+    socket.on("formal-completed", ({ matchId }: { matchId: string }) => {
+      if (cancelled || (matchRef.current && matchRef.current !== matchId)) return;
+      maySpeakRef.current = false;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setMicOn(false);
+      closePeer();
+      setStatus("completed");
+      setFormalState((previous) => previous ? { ...previous, completed: true } : null);
+    });
     socket.on("debate-already-active", () => {
       searching = false;
       setStatus("error");
@@ -138,6 +184,13 @@ export function useDebateRoom(
       async ({ matchId, initiator, peer }: MatchedPayload) => {
         if (cancelled) return;
         closePeer();
+        setFormalState(null);
+        if (preferences.mode === 'formal') {
+          maySpeakRef.current = false;
+          const track = streamRef.current?.getAudioTracks()[0];
+          if (track) track.enabled = false;
+          setMicOn(false);
+        }
         matchRef.current = matchId;
         setMessages([]);
         setPeerName(peer?.fullname || "");
@@ -241,6 +294,13 @@ export function useDebateRoom(
       toast.error("Could not search. Wait a few seconds and try again.");
     });
     socket.on("peer-left", () => {
+      if (preferences.mode === 'formal') {
+        maySpeakRef.current = false;
+        const track = streamRef.current?.getAudioTracks()[0];
+        if (track) track.enabled = false;
+        setMicOn(false);
+      }
+      setFormalState(null);
       closePeer();
       setStatus("peer-left");
       toast.info("Your partner left the debate.");
@@ -269,7 +329,10 @@ export function useDebateRoom(
           return;
         }
         streamRef.current = stream;
-        setMicOn(true);
+        const enabled = preferences.mode !== 'formal' && micWantedRef.current;
+        const audio = stream.getAudioTracks()[0];
+        if (audio) audio.enabled = enabled;
+        setMicOn(enabled);
         setCamOn(true);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         start();
@@ -306,6 +369,10 @@ export function useDebateRoom(
     setMessages([]);
     setPeerName("");
     setStatus("starting");
+    setFormalState(null);
+    maySpeakRef.current = preferences.mode !== 'formal';
+    const audio = streamRef.current?.getAudioTracks()[0];
+    if (audio) audio.enabled = preferences.mode !== 'formal' && micWantedRef.current;
     try {
       const config = await api.get<RTCConfiguration>("/auth/ice-servers");
       if (
@@ -364,6 +431,11 @@ export function useDebateRoom(
     setMessages([]);
     setPeerName("");
     setStatus("blocked");
+    setFormalState(null);
+    maySpeakRef.current = false;
+    const audio = streamRef.current?.getAudioTracks()[0];
+    if (audio) audio.enabled = false;
+    setMicOn(false);
     toast.success("User blocked.");
     return true;
   }, [emitWithAck, closePeer]);
@@ -395,9 +467,11 @@ export function useDebateRoom(
     [status, emitWithAck],
   );
   const toggleMic = () => {
+    if (!maySpeakRef.current) return;
     const track = streamRef.current?.getAudioTracks()[0];
     if (track) {
-      track.enabled = !track.enabled;
+      micWantedRef.current = !micWantedRef.current;
+      track.enabled = micWantedRef.current;
       setMicOn(track.enabled);
     }
   };
@@ -420,5 +494,9 @@ export function useDebateRoom(
     toggleCamera,
     micOn,
     camOn,
+    formalState,
+    maySpeak: preferences.mode !== 'formal' || (formalState?.isSpeaker === true && !formalState.completed),
+    debateRemainingMs: formalState ? Math.max(0, formalState.endsAt - (countdownNow + clockOffset)) : null,
+    turnRemainingMs: formalState ? Math.max(0, formalState.turnEndsAt - (countdownNow + clockOffset)) : null,
   };
 }

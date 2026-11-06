@@ -149,3 +149,32 @@ it("sends selected preferences for initial search and Next", async () => {
   await act(async () => { await result.current.findNext(); });
   expect(mocks.emit).toHaveBeenLastCalledWith("find-partner", preferences);
 });
+
+it("enforces non-speaker audio mute and restores only on an authorized turn", async () => {
+  const audio = { enabled: true, stop: vi.fn() };
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: vi.fn(async () => ({ getTracks: () => [audio], getAudioTracks: () => [audio], getVideoTracks: () => [] })),
+  } });
+  const preferences: DebatePreferences = { topic: "science", language: "en", mode: "formal" };
+  const { result } = await setup(preferences);
+  expect(audio.enabled).toBe(false);
+  await fire("matched", { matchId: "formal-1", initiator: false });
+  const state = { matchId: "formal-1", serverNow: Date.now(), startedAt: Date.now(), endsAt: Date.now() + 600000,
+    turnEndsAt: Date.now() + 120000, turnNumber: 1, isSpeaker: false, completed: false };
+  await fire("formal-state", state);
+  expect(result.current.maySpeak).toBe(false);
+  expect(audio.enabled).toBe(false);
+  act(() => result.current.toggleMic());
+  expect(audio.enabled).toBe(false);
+  await fire("formal-state", { ...state, isSpeaker: true, turnNumber: 2 });
+  expect(result.current.maySpeak).toBe(true);
+  expect(audio.enabled).toBe(true);
+  act(() => result.current.toggleMic());
+  expect(audio.enabled).toBe(false);
+  await fire("formal-state", { ...state, isSpeaker: false, turnNumber: 3 });
+  await fire("formal-state", { ...state, isSpeaker: true, turnNumber: 4 });
+  expect(audio.enabled).toBe(false);
+  await fire("formal-completed", { matchId: "formal-1" });
+  expect(result.current.status).toBe("completed");
+  expect(audio.stop).toHaveBeenCalled();
+});
