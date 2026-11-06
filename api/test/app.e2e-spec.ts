@@ -48,7 +48,15 @@ describe("Debate API (e2e)", () => {
   });
 
   afterAll(async () => {
-    sockets.forEach((s) => s.disconnect());
+    // Explicitly leave any lingering sessions before removing their participants.
+    const gateway = app.get(RealtimeGateway);
+    const connected = sockets.filter((socket) => socket.connected);
+    connected.forEach((socket) => socket.emit('leave'));
+    // Socket events are delivered asynchronously; allow the event loop to
+    // process leave notifications, then await any resulting history writes.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    sockets.forEach((socket) => socket.disconnect());
+    await gateway.drainHistoryWrites();
     await prisma.user.deleteMany({ where: { email: { startsWith: RUN } } });
     await app.close();
   });

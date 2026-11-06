@@ -29,6 +29,7 @@ export function ActionForm({
   const [hours, setHours] = useState(24);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmationName, setConfirmationName] = useState('');
   const options: ActionKind[] = onlyDismiss
     ? ['DISMISS']
     : report
@@ -38,10 +39,10 @@ export function ActionForm({
         : ['WARN', 'SUSPEND', 'BAN'];
   const review = (e: FormEvent) => {
     e.preventDefault();
-    if (reason.trim().length >= 5) setConfirm(true);
+    if (reason.trim().length >= 5) { setConfirmationName(''); setConfirm(true); }
   };
   const submit = async () => {
-    if (busy) return;
+    if (busy || (action === 'BAN' && confirmationName.trim() !== name)) return;
     setBusy(true);
     try {
       if (
@@ -144,6 +145,14 @@ export function ActionForm({
                   ? 'This saves a conduct warning. Connected users receive a notification.'
                   : 'This closes the report without restricting the account.'}
         </p>
+        {action === 'BAN' && (
+          <label className="mt-5 block text-sm font-semibold">
+            Type the account name to confirm: <span className="font-bold">{name}</span>
+            <input type="text" autoComplete="off" value={confirmationName}
+              onChange={(event) => setConfirmationName(event.target.value)}
+              className={`${field} mt-2`} aria-label="Confirm account name" />
+          </label>
+        )}
         <div className="mt-5 flex flex-wrap justify-end gap-3">
           <button
             disabled={busy}
@@ -153,9 +162,9 @@ export function ActionForm({
             Cancel
           </button>
           <button
-            disabled={busy}
+            disabled={busy || (action === 'BAN' && confirmationName.trim() !== name)}
             onClick={submit}
-            className="min-h-11 rounded-full bg-primary px-5 text-background disabled:opacity-40"
+            className={`min-h-11 rounded-xl px-5 font-semibold disabled:opacity-40 ${action === 'BAN' ? 'bg-red-600 text-white' : 'bg-primary text-background'}`}
           >
             {busy ? 'Saving...' : 'Confirm action'}
           </button>
