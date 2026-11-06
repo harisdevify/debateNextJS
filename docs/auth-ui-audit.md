@@ -1,17 +1,16 @@
-# Authentication and UI findings
+# Authentication and UI remediation
+- Race-safe /auth/me initialization prevents late responses overriding successful login.
+- Distinguishes a confirmed unauthorized response (401/403) from timeout/network errors; a temporary failure does not assume logout.
+- Login screen remains usable when session verification fails.
+- Protected profile/debate routes provide a retry path rather than falsely redirecting to login after a network error.
+- Guest homepage CTA says Login to Start Debating; authorized users go to debate or rules.
+- Header avoids flashing guest links during initial auth loading.
+- Login/register reuse accessible TextField and PrimaryButton components with associated labels and focus states.
+- Removes unsupported homepage metrics/profanity claims.
+- API timeout raised to 10s.
 
-## Implemented
-- Auth initial-state check is race-safe: a slow /auth/me cannot overwrite a successful login.
-- Network failures are not treated as confirmed logout. Protected screens offer retry.
-- Guest homepage does not advertise an immediately available video session: CTA routes to login and identifies its requirement.
-- Header avoids guest-only actions while auth is unresolved.
-- Homepage's unverified usage/latency/profanity claims are removed.
-- API request timeout increased from 5 to 10 seconds to reduce false failures on slow networks.
+## Still needs deployment diagnosis
+API uses an HTTP-only cookie scoped to the API hostname (SameSite=None in production). If frontend/API are on unrelated sites, third-party-cookie restrictions can break /auth/me and WebSocket authorization despite a 200 login response. Use same-site HTTPS domains or a proven reverse proxy and verify browser cookies, CLIENT_URL, NEXT_PUBLIC_API_URL and NEXT_PUBLIC_SOCKET_URL. Do not store JWTs in localStorage as a workaround.
 
-## Deployment blocker to verify
-The API issues a host-only HTTP-only cookie with production SameSite=None. If Next frontend and Nest API are on separate unrelated sites, browsers may block the third-party cookie, causing /auth/me, ICE endpoint and socket authorization failures even after login returned 200. This cannot be corrected solely by client state or React code.
-
-Production should use same-site HTTPS frontend/API subdomains (e.g. app.example.com and api.example.com under the same registrable domain), or a tested same-origin reverse proxy for HTTP and Socket.IO. Verify CLIENT_URL, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SOCKET_URL, HTTPS and browser cookie storage. Never put raw JWTs in localStorage as a shortcut.
-
-## Browser verification
-Full interactive desktop/mobile checks were not available because the connected browser extension rejected access outside its originating browser context. Automated CI checks are not a substitute for manually verifying real browser cookie behavior, WebRTC, layout or device permissions.
+## Manual browser check not performed
+Connected browser extension rejected the request outside its originating browser session. GitHub CI is automated validation, not proof of browser/mobile UX or real WebRTC function.

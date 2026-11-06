@@ -1,10 +1,11 @@
 'use client';
 import api from '@/lib/api';
+import { TextField } from '@/components/ui/TextField';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
   ArrowRight,
   BookOpen,
-  CheckCircle2,
-  Eye,
+   Eye,
   EyeOff,
   Lock,
   Mail,
@@ -90,10 +91,7 @@ export default function SignUpPage() {
     }
   };
 
-  const inputWrap = 'relative';
-  const iconClass =
-    'absolute left-3.5 top-1/2 -translate-y-1/2 stroke-white/25 pointer-events-none';
-  const inputClass = `input w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.05] text-white border border-white/[0.08] placeholder:text-white/20 focus:outline-none focus:border-primary/60 focus:bg-white/[0.07] transition-all duration-200`;
+  const inputClass = 'w-full min-h-12 rounded-xl border border-white/15 bg-white/[0.05] px-4 py-3 text-white outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25';
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
@@ -181,25 +179,8 @@ export default function SignUpPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {/* Text fields */}
               {fields.map(({ name, label, type, placeholder, icon: Icon }) => (
-                <div key={name}>
-                  <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                    {label}
-                  </label>
-                  <div className={inputWrap}>
-                    <Icon size={15} className={iconClass} />
-                    <input
-                      type={type}
-                      name={name}
-                      placeholder={placeholder}
-                      required
-                      value={form[name]}
-                      onChange={handleChange}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
+                <TextField key={name} label={label} icon={Icon} type={type} name={name} placeholder={placeholder} required value={form[name]} onChange={handleChange} autoComplete={name === 'email' ? 'email' : 'on'} />
               ))}
 
               {/* Gender */}
@@ -226,31 +207,8 @@ export default function SignUpPage() {
                 </select>
               </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-white/50 text-xs uppercase tracking-wider font-semibold mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock size={15} className={iconClass} />
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    name="password"
-                    placeholder="Create a strong password"
-                    required
-                    value={form.password}
-                    onChange={handleChange}
-                    className={`${inputClass} pr-11`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass((p) => !p)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-primary transition-colors duration-200"
-                  >
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
+              <TextField label="Password" icon={Lock} type={showPass ? 'text' : 'password'} name="password" autoComplete="new-password" placeholder="Create a strong password" required value={form.password} onChange={handleChange}
+                trailing={<button type="button" onClick={() => setShowPass((value) => !value)} aria-label={showPass ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/60 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">{showPass ? <EyeOff size={17} /> : <Eye size={17} />}</button>} />
 
               {/* Rules + age confirmation (also enforced by the API) */}
               <div className="flex flex-col gap-3 pt-1">
@@ -290,27 +248,7 @@ export default function SignUpPage() {
                 </label>
               </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="group mt-2 w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-[#0a0a0a] font-bold text-[1rem] transition-all duration-300 hover:bg-[#00d4b8] hover:shadow-[0_0_28px_rgba(0,191,166,0.45)] hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] animate-spin" />
-                    Creating account…
-                  </span>
-                ) : (
-                  <>
-                    Create Account
-                    <ArrowRight
-                      size={17}
-                      className="transition-transform duration-300 group-hover:translate-x-1"
-                    />
-                  </>
-                )}
-              </button>
+              <PrimaryButton type="submit" busy={loading} busyLabel="Creating account…">Create Account <ArrowRight size={18} aria-hidden="true" /></PrimaryButton>
             </form>
 
             <p className="mt-5 text-center text-white/30 text-sm">
