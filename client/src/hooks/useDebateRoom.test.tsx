@@ -100,8 +100,9 @@ it("does not show connected until WebRTC connects; handles failed transport", as
   expect(pc.close).not.toHaveBeenCalled();
 });
 it("ignores signaling belonging to a previous partner", async () => {
-  await setup();
+  const { result } = await setup();
   await fire("matched", { matchId: "old", initiator: false });
+  await act(async () => { await result.current.findNext(); });
   await fire("matched", { matchId: "new", initiator: false });
   await fire("offer", {
     matchId: "old",
