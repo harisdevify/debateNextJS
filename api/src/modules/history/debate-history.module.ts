@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 import { AccountAccessModule } from '../access/account-access.module';
 import { DebateHistoryController } from './debate-history.controller';
 import { DebateHistoryService } from './debate-history.service';
 
 @Module({
-  imports: [PrismaModule, AccountAccessModule, JwtModule.register({})],
+  imports: [PrismaModule, AccountAccessModule, AuthModule],
   controllers: [DebateHistoryController],
   providers: [DebateHistoryService],
 })
