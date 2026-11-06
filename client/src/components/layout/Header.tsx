@@ -15,7 +15,7 @@ export default function Header() {
   const pathname = usePathname();
   const [, startTransition] = useTransition();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loading, verificationError } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -25,6 +25,16 @@ export default function Header() {
       setSidebarOpen(false);
     });
   }, [pathname]);
+
+  // Allow closing the mobile drawer from the keyboard.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [sidebarOpen]);
 
   // Lock body scroll when sidebar is open
   useEffect(() => {
@@ -58,7 +68,9 @@ export default function Header() {
     ...(user?.role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
     { href: '/', label: 'Home' },
     { href: '/rules', label: 'Rules' },
-    ...(user
+    ...(loading || verificationError
+      ? []
+      : user
       ? [
           { href: '/profile', label: 'Profile' },
           { href: '/video', label: 'Debate' },
@@ -97,7 +109,7 @@ export default function Header() {
               </Link>
             ))}
 
-            {user && (
+            {!loading && user && (
               <button
                 type="button"
                 onClick={handleLogout}
@@ -113,6 +125,8 @@ export default function Header() {
             onClick={() => setSidebarOpen(true)}
             className="pressable flex h-10 w-10 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/5 md:hidden"
             aria-label="Open menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="mobile-navigation"
           >
             <Menu size={22} />
           </button>
@@ -131,6 +145,10 @@ export default function Header() {
 
       {/* Drawer — spring easing */}
       <aside
+        id="mobile-navigation"
+        aria-label="Mobile navigation"
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen}
         className={`fixed top-0 right-0 z-[70] flex h-full w-[280px] flex-col
                     border-l border-white/[0.08] bg-[#0a1210]/95 backdrop-blur-xl
                     shadow-[-8px_0_40px_rgba(0,0,0,0.5)]
@@ -162,7 +180,9 @@ export default function Header() {
 
         {/* Bottom actions */}
         <div className="border-t border-white/[0.06] px-3 pt-3 pb-6">
-          {user ? (
+          {loading || verificationError ? (
+            <span role="status" className="block px-4 py-3 text-center text-sm text-white/60">Checking session…</span>
+          ) : user ? (
             <button
               onClick={handleLogout}
               className="pressable mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 font-medium text-red-400 transition-colors hover:bg-red-400/20 hover:text-red-300"

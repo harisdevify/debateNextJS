@@ -135,11 +135,11 @@ export function useDebateRoom(
     socket.on("connect_error", (err: Error) => {
       if (cancelled) return;
       setStatus("error");
-      toast.error(
-        err.message === "Not authenticated"
-          ? "Please login again."
-          : "Cannot reach the debate server.",
-      );
+      if (err.message === "Not authenticated") {
+        toast.error("The debate server could not verify your login cookie. Check browser cookie permissions and try signing in again.");
+      } else {
+        toast.error("Cannot reach the debate server. Check your network or try again.");
+      }
     });
     socket.on("disconnect", () => {
       if (cancelled) return;
@@ -362,7 +362,20 @@ export function useDebateRoom(
           toast.error(environmentError);
           return;
         }
-        const config = await api.get<RTCConfiguration>("/auth/ice-servers");
+        let config: { data: RTCConfiguration };
+        try {
+          config = await api.get<RTCConfiguration>("/auth/ice-servers", { silent: true });
+        } catch (error) {
+          if (cancelled) return;
+          const statusCode = (error as { response?: { status?: number } })?.response?.status;
+          setStatus("error");
+          toast.error(
+            statusCode === 401
+              ? "The server is not receiving your login cookie. Please sign in again or check browser cookie settings."
+              : "Could not load video connection settings. Check your connection and retry.",
+          );
+          return;
+        }
         if (cancelled) return;
         configRef.current = config.data;
         let stream: MediaStream;
@@ -400,7 +413,7 @@ export function useDebateRoom(
         if (!cancelled) {
           setStatus("error");
           toast.error(
-            "Could not start. Check your session, camera and microphone permissions.",
+            "Could not initialize the debate. Check your internet connection and retry.",
           );
         }
       }

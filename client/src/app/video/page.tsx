@@ -440,13 +440,13 @@ function DebateRoom({ preferences, onChangePreferences }: { preferences: DebateP
 /* ── Auth gate ─────────────────────────────── */
 // DebateRoom (camera/mic/socket hooks) only mounts once the user is confirmed.
 export default function VideoPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, verificationError, retrySession } = useAuth();
   const router = useRouter();
 
   const accepted = !!user?.acceptedRulesAt && !!user?.ageConfirmedAt;
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || verificationError) return;
     if (!user) {
       router.replace('/login');
     } else if (!accepted) {
@@ -454,9 +454,11 @@ export default function VideoPage() {
       toast.info('Please accept the rules to join a debate.');
       router.replace('/rules');
     }
-  }, [loading, user, accepted, router]);
+  }, [loading, verificationError, user, accepted, router]);
 
-  if (loading || !user || !accepted) return null;
+  if (loading) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
+  if (verificationError) return <div role="alert" className="mx-auto my-14 max-w-md rounded-xl border border-amber-300/30 p-6 text-center text-white/80">Session could not be verified. <button className="ml-2 font-semibold text-primary underline" onClick={() => void retrySession()}>Retry</button></div>;
+  if (!user || !accepted) return null;
   return <AuthenticatedDebate />;
 }
 

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8800/api/v1',
-  timeout: 5000,
+  timeout: 10000,
   withCredentials: true, // required so the auth cookie is sent
 });
 

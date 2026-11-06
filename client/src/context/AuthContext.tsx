@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -15,6 +16,9 @@ interface AuthContextValue {
   user: User | null;
   /** true until the first /auth/me check has finished */
   loading: boolean;
+  /** Initial auth could not be verified due to network/server failure. */
+  verificationError: boolean;
+  retrySession: () => Promise<void>;
   login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => Promise<void>;
   updateProfile: (fields: ProfileFields) => Promise<User>;
@@ -54,23 +58,38 @@ const readOverrides = (userId: number): Overrides => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Source of truth is the server: the cookie is httpOnly, so ask /auth/me.
-  useEffect(() => {
-    let active = true;
-    api
-      .get<User>('/auth/me', { silent: true })
-      .then((res) => active && setUser(res.data))
-      .catch(() => active && setUser(null))
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
+  const [verificationError, setVerificationError] = useState(false);
+  // Prevent an earlier /auth/me response from replacing a newer login.
+  const authVersion = useRef(0);
+  const verifySession = useCallback(async () => {
+    const version = ++authVersion.current;
+    setLoading(true);
+    setVerificationError(false);
+    try {
+      const response = await api.get<User>('/auth/me', { silent: true });
+      if (authVersion.current === version) setUser(response.data);
+    } catch (error) {
+      if (authVersion.current !== version) return;
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401 || status === 403) setUser(null);
+      else setVerificationError(true);
+    } finally {
+      if (authVersion.current === version) setLoading(false);
+    }
   }, []);
+  useEffect(() => {
+    // Schedule the initial request after commit, not synchronously in the effect.
+    const versionRef = authVersion;
+    void Promise.resolve().then(() => verifySession());
+    return () => { versionRef.current++; };
+  }, [verifySession]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     const res = await api.post<User>('/auth/login', credentials);
+    authVersion.current++;
     setUser(res.data);
+    setVerificationError(false);
+    setLoading(false);
     return res.data;
   }, []);
 
@@ -93,7 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.post('/auth/logout', null, { silent: true });
     } finally {
+      authVersion.current++;
       setUser(null);
+      setVerificationError(false);
+      setLoading(false);
     }
   }, []);
 
@@ -121,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      verificationError,
+      retrySession: verifySession,
       login,
       logout,
       updateProfile,
@@ -132,6 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       loading,
+      verificationError,
+      verifySession,
       login,
       logout,
       updateProfile,
