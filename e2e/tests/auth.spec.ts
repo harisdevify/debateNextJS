@@ -40,7 +40,7 @@ test('new account can be registered through the real form', async ({ page }) => 
   await page.getByRole('textbox', { name: 'Country' }).fill('Pakistan');
   await page.getByRole('textbox', { name: 'Email' }).fill(`ui-${id}@example.test`);
   await page.getByRole('combobox', { name: 'Gender' }).selectOption('male');
-  await page.getByLabel('Password').fill('BrowserStrong!123');
+  await page.locator('input[name="password"]').fill('BrowserStrong!123');
   await page.getByRole('checkbox', { name: /I have read and agree/i }).check();
   await page.getByRole('checkbox', { name: /I confirm that I am 18/i }).check();
   await page.getByRole('button', { name: /Create Account/ }).click();

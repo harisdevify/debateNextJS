@@ -34,7 +34,7 @@ export async function registerAccount(request: APIRequestContext): Promise<TestA
 export async function login(page: Page, account: TestAccount) {
   await page.goto('/login');
   await page.getByRole('textbox', { name: 'Email' }).fill(account.email);
-  await page.getByLabel('Password').fill(account.password);
+  await page.locator('input[name="password"]').fill(account.password);
   await page.getByRole('button', { name: /^Login$/ }).click();
   await expect(page).toHaveURL(/\/profile(?:\?|$)/);
   await expect(page.getByRole('heading', { name: account.fullname })).toBeVisible();
