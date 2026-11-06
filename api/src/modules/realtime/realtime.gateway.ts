@@ -1,3 +1,4 @@
+import { parseSignal } from './webrtc-signal.validation';
 import { formalClock, FORMAL_RECONNECT_GRACE_MS, type FormalClock } from './formal-debate-clock';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
@@ -30,6 +31,7 @@ type DebateSocket = Socket & {
   data: {
     user?: SocketUser;
     searchVersion?: number;
+    lastIceRestartRequestAt?: number;
     preferences?: DebatePreferencesDto;
     tokenHash?: string;
     matchId?: string;
@@ -216,20 +218,30 @@ export class RealtimeGateway
       (...args: unknown[]) =>
         void this.blockPartner(client, args[args.length - 1]),
     );
-    for (const event of ["offer", "answer", "ice-candidate"]) {
+    for (const event of ['offer', 'answer', 'ice-candidate'] as const) {
       client.on(event, (payload: unknown) => {
         const peerId = client.data.peerId;
-        if (
-          peerId &&
-          typeof payload === "object" &&
-          payload !== null &&
-          "matchId" in payload &&
-          payload.matchId === client.data.matchId
-        ) {
-          this.server.to(peerId).emit(event, payload);
-        }
+        const peer = peerId ? this.server.sockets.sockets.get(peerId) as DebateSocket | undefined : undefined;
+        if (!peer || peer.data.peerId !== client.id || peer.data.matchId !== client.data.matchId)
+          return;
+        const signal = parseSignal(event, payload, client.data.matchId);
+        if (signal) peer.emit(event, signal);
       });
     }
+    // Only the current peer can request a limited ICE restart from the offerer.
+    client.on('ice-restart-request', (payload: unknown) => {
+      const matchId = client.data.matchId;
+      const peerId = client.data.peerId;
+      const peer = peerId ? this.server.sockets.sockets.get(peerId) as DebateSocket | undefined : undefined;
+      if (!matchId || !peer || peer.data.peerId !== client.id || peer.data.matchId !== matchId)
+        return;
+      if (typeof payload !== 'object' || payload === null ||
+          (payload as { matchId?: unknown }).matchId !== matchId) return;
+      const now = Date.now();
+      if (now - (client.data.lastIceRestartRequestAt ?? 0) < 10_000) return;
+      client.data.lastIceRestartRequestAt = now;
+      peer.emit('ice-restart-request', { matchId });
+    });
     client.on(
       "chatMessage",
       (value: unknown, ack?: unknown) => void this.chat(client, value, ack),

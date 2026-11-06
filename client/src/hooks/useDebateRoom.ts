@@ -1,6 +1,7 @@
 "use client";
 import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
+import { mediaEnvironmentError, mediaErrorMessage } from "@/lib/media-errors";
 import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences, FormalDebateState } from "@/types";
 import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
@@ -31,6 +32,7 @@ export function useDebateRoom(
   const matchRef = useRef<string | null>(null);
   const iceRef = useRef<RTCIceCandidateInit[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recoveryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configRef = useRef<RTCConfiguration>({ iceServers: [] });
   const searchRef = useRef(0);
   const micWantedRef = useRef(true);
@@ -51,6 +53,8 @@ export function useDebateRoom(
   const closePeer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+    if (recoveryRef.current) clearTimeout(recoveryRef.current);
+    recoveryRef.current = null;
     const pc = peerRef.current;
     peerRef.current = null;
     matchRef.current = null;
@@ -68,6 +72,8 @@ export function useDebateRoom(
     socketRef.current = socket;
     let cancelled = false;
     let searching = false;
+    let offerer = false;
+    let restartAttempted = false;
     const active = (pc: RTCPeerConnection, id: string) =>
       !cancelled && peerRef.current === pc && matchRef.current === id;
     const fail = (pc: RTCPeerConnection, message: string) => {
@@ -83,6 +89,32 @@ export function useDebateRoom(
         () => fail(pc, "Video connection timed out. Try another partner."),
         ms,
       );
+    };
+    const restartIce = async (pc: RTCPeerConnection, id: string) => {
+      if (!active(pc, id) || restartAttempted) return;
+      restartAttempted = true;
+      setStatus("reconnecting");
+      if (offerer) {
+        try {
+          const offer = await pc.createOffer({ iceRestart: true });
+          if (!active(pc, id)) return;
+          await pc.setLocalDescription(offer);
+          if (active(pc, id)) socket.emit("offer", { matchId: id, data: offer });
+        } catch {
+          fail(pc, "Video recovery failed. Check your connection and try another partner.");
+          return;
+        }
+      } else {
+        socket.emit("ice-restart-request", { matchId: id });
+      }
+      timeout(pc, 10_000);
+    };
+    const scheduleRecovery = (pc: RTCPeerConnection, id: string) => {
+      if (!active(pc, id) || recoveryRef.current) return;
+      recoveryRef.current = setTimeout(() => {
+        recoveryRef.current = null;
+        void restartIce(pc, id);
+      }, 5_000);
     };
     const flushIce = async (pc: RTCPeerConnection, id: string) => {
       const queued = iceRef.current;
@@ -184,6 +216,8 @@ export function useDebateRoom(
       async ({ matchId, initiator, peer }: MatchedPayload) => {
         if (cancelled) return;
         closePeer();
+        offerer = initiator;
+        restartAttempted = false;
         setFormalState(null);
         if (preferences.mode === 'formal') {
           maySpeakRef.current = false;
@@ -212,15 +246,16 @@ export function useDebateRoom(
           if (pc.connectionState === "connected") {
             if (timerRef.current) clearTimeout(timerRef.current);
             timerRef.current = null;
+            if (recoveryRef.current) clearTimeout(recoveryRef.current);
+            recoveryRef.current = null;
+            restartAttempted = false;
             setStatus("connected");
           } else if (pc.connectionState === "disconnected") {
             setStatus("reconnecting");
-            timeout(pc, 10_000);
-          } else if (pc.connectionState === "failed")
-            fail(
-              pc,
-              "Video connection failed. Try another partner or check your network.",
-            );
+            scheduleRecovery(pc, matchId);
+          } else if (pc.connectionState === "failed") {
+            void restartIce(pc, matchId);
+          }
         };
         timeout(pc, 30_000);
         try {
@@ -236,6 +271,10 @@ export function useDebateRoom(
         }
       },
     );
+    socket.on("ice-restart-request", ({ matchId }: { matchId: string }) => {
+      const pc = peerRef.current;
+      if (pc && offerer && active(pc, matchId)) void restartIce(pc, matchId);
+    });
     socket.on(
       "offer",
       async ({ matchId, data }: Signal<RTCSessionDescriptionInit>) => {
@@ -317,18 +356,39 @@ export function useDebateRoom(
     );
     void (async () => {
       try {
+        const environmentError = mediaEnvironmentError();
+        if (environmentError) {
+          setStatus("error");
+          toast.error(environmentError);
+          return;
+        }
         const config = await api.get<RTCConfiguration>("/auth/ice-servers");
         if (cancelled) return;
         configRef.current = config.data;
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } catch (error) {
+          if (!cancelled) {
+            setStatus("error");
+            toast.error(mediaErrorMessage(error));
+          }
+          return;
+        }
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         streamRef.current = stream;
+        for (const track of stream.getTracks()) {
+          track.onended = () => {
+            if (cancelled || streamRef.current !== stream) return;
+            socket.emit("leave");
+            closePeer();
+            setStatus("error");
+            toast.error("Your camera or microphone disconnected. Reconnect it, then retry.");
+          };
+        }
         const enabled = preferences.mode !== 'formal' && micWantedRef.current;
         const audio = stream.getAudioTracks()[0];
         if (audio) audio.enabled = enabled;
@@ -347,7 +407,7 @@ export function useDebateRoom(
     })();
     return () => {
       cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((t) => { t.onended = null; t.stop(); });
       streamRef.current = null;
       closePeer();
       socket.removeAllListeners();
