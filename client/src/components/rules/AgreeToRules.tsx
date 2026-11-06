@@ -18,7 +18,7 @@ function Box({ children }: { children: ReactNode }) {
 
 /** The agreement box at the bottom of the rules page; adapts to the login state. */
 export function AgreeToRules() {
-  const { user, loading, acceptRules } = useAuth();
+  const { user, loading, verificationError, retrySession, acceptRules } = useAuth();
   const router = useRouter();
   const [rulesChecked, setRulesChecked] = useState(false);
   const [ageChecked, setAgeChecked] = useState(false);
@@ -31,6 +31,13 @@ export function AgreeToRules() {
       </Box>
     );
   }
+
+  if (verificationError) return (
+    <Box>
+      <p role="alert" className="mb-4 text-sm text-amber-200">Could not verify your current session. Check your connection and retry.</p>
+      <button onClick={() => void retrySession()} className={primaryButton}>Retry connection</button>
+    </Box>
+  );
 
   if (!user) {
     return (
