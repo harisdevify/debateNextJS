@@ -14,12 +14,18 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminService } from './admin.service';
-import { AdminListDto, ModerateDto } from './dto/admin.dto';
+import { AdminAuditQueryDto, AdminListDto, ModerateDto } from './dto/admin.dto';
 import { AdminGuard } from './guards/admin.guard';
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
   constructor(private readonly admin: AdminService) {}
+  @Get('overview') overview() {
+    return this.admin.overview();
+  }
+  @Get('audit') audit(@Query() query: AdminAuditQueryDto) {
+    return this.admin.audit(query);
+  }
   @Get('reports') reports(@Query() query: AdminListDto) {
     return this.admin.reports(query);
   }

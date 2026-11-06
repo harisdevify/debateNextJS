@@ -11,7 +11,7 @@ import {
   assertActive,
   effectiveStatus,
 } from '../access/account-access.service';
-import { AdminListDto, ModerateDto } from './dto/admin.dto';
+import { AdminAuditQueryDto, AdminListDto, ModerateDto } from './dto/admin.dto';
 const userSelect = {
   id: true,
   fullname: true,
@@ -28,8 +28,55 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly access: AccountAccessService
   ) {}
+  async overview() {
+    const [pendingReports, reviewedReports, suspendedUsers, bannedUsers, recentActions] =
+      await this.prisma.$transaction([
+        this.prisma.report.count({ where: { status: 'OPEN' } }),
+        this.prisma.report.count({ where: { status: 'REVIEWED' } }),
+        this.prisma.user.count({
+          where: { status: 'SUSPENDED', suspendedUntil: { gt: new Date() } },
+        }),
+        this.prisma.user.count({ where: { status: 'BANNED' } }),
+        this.prisma.moderationAction.count({
+          where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 3600_000) } },
+        }),
+      ]);
+    return { pendingReports, reviewedReports, suspendedUsers, bannedUsers, recentActions };
+  }
+
+  async audit(query: AdminAuditQueryDto) {
+    const where = query.kind ? { kind: query.kind } : {};
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.moderationAction.findMany({
+        where,
+        take: PAGE_SIZE,
+        skip: (query.page - 1) * PAGE_SIZE,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          id: true, kind: true, reason: true, createdAt: true,
+          previousStatus: true, suspendedUntil: true, reportId: true,
+          actor: { select: actorSelect },
+          target: { select: userSelect },
+        },
+      }),
+      this.prisma.moderationAction.count({ where }),
+    ]);
+    return { items, total, page: query.page, pageSize: PAGE_SIZE };
+  }
+
   async reports(query: AdminListDto) {
-    const where = query.status ? { status: query.status } : {};
+    const term = query.search?.trim();
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(term ? {
+        OR: [
+          { reportedUser: { fullname: { contains: term, mode: 'insensitive' as const } } },
+          { reportedUser: { email: { contains: term, mode: 'insensitive' as const } } },
+          { reporter: { fullname: { contains: term, mode: 'insensitive' as const } } },
+          { reporter: { email: { contains: term, mode: 'insensitive' as const } } },
+        ],
+      } : {}),
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.report.findMany({
         where,
