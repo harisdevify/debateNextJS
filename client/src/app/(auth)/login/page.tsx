@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 const highlights = [
@@ -26,7 +26,10 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user, loading: authLoading, verificationError } = useAuth();
+  useEffect(() => {
+    if (!authLoading && user) router.replace('/profile');
+  }, [authLoading, user, router]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -38,7 +41,8 @@ export default function LoginPage() {
       setLoading(true);
       await login(form);
       toast.success('Login successfully!');
-      router.push('/profile');
+      router.replace('/profile');
+      router.refresh();
     } catch {
       // the api interceptor already shows the error toast
     } finally {
@@ -50,6 +54,8 @@ export default function LoginPage() {
      placeholder:text-white/20 focus:outline-none focus:border-primary/60 focus:bg-white/[0.07]
      transition-all duration-200`;
 
+  if (authLoading || user) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
+  if (verificationError) return <div role="alert" className="mx-auto max-w-md p-8 text-center text-white/70">Unable to reach the authentication server. Check your connection and reload.</div>;
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
       <section className="relative flex-1 flex items-center justify-center px-4 py-16">

@@ -15,7 +15,7 @@ export default function Header() {
   const pathname = usePathname();
   const [, startTransition] = useTransition();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loading, verificationError } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -58,7 +58,9 @@ export default function Header() {
     ...(user?.role === 'ADMIN' ? [{ href: '/admin', label: 'Admin' }] : []),
     { href: '/', label: 'Home' },
     { href: '/rules', label: 'Rules' },
-    ...(user
+    ...(loading || verificationError
+      ? []
+      : user
       ? [
           { href: '/profile', label: 'Profile' },
           { href: '/video', label: 'Debate' },
@@ -97,7 +99,7 @@ export default function Header() {
               </Link>
             ))}
 
-            {user && (
+            {!loading && user && (
               <button
                 type="button"
                 onClick={handleLogout}

@@ -7,32 +7,33 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DebateCTA } from '@/components/debate/DebateCTA';
 
 const features = [
   {
     icon: Video,
     title: 'Live Video Debates',
-    desc: 'Real-time peer-to-peer video sessions powered by WebRTC. Crystal clear, zero latency, fully secure.',
+    desc: 'Real-time peer-to-peer video sessions powered by WebRTC. Peer-to-peer media with supported ICE/STUN/TURN connectivity.',
     stat: 'WebRTC',
   },
   {
     icon: MessageCircle,
     title: 'Live Text Chat',
-    desc: 'Instant messaging with smart profanity filtering. Stay on topic, stay respectful.',
+    desc: 'Instant messaging with reporting and blocking controls. Stay on topic, stay respectful.',
     stat: 'Real-time',
   },
   {
     icon: ShieldCheck,
     title: 'Moderated Sessions',
-    desc: 'Dedicated moderators ensure every debate stays compliant with Islamic values and platform rules.',
+    desc: 'Reporting and account moderation help maintain platform rules.',
     stat: 'Monitored',
   },
 ];
 
 const stats = [
-  { icon: Users, value: '2,400+', label: 'Active Debaters' },
-  { icon: Zap, value: '180ms', label: 'Avg Latency' },
-  { icon: ShieldCheck, value: '100%', label: 'Moderated' },
+  { icon: Users, value: '1-to-1', label: 'Live Discussions' },
+  { icon: Zap, value: '2', label: 'Languages' },
+  { icon: ShieldCheck, value: '24/7', label: 'Report Access' },
 ];
 
 export default function HomePage() {
@@ -103,8 +104,7 @@ export default function HomePage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-3 justify-center mt-2">
-            <Link
-              href="/video"
+            <DebateCTA
               className="pressable group flex items-center gap-2 px-7 py-3.5 text-[1rem] font-bold rounded-xl
                          bg-primary text-[#0a0a0a]
                          shadow-[0_0_0_0_rgba(0,191,166,0.5)]
@@ -112,12 +112,7 @@ export default function HomePage() {
                          hover:shadow-[0_0_30px_rgba(0,191,166,0.45)]
                          hover:bg-[#00d4b8] hover:-translate-y-0.5"
             >
-              Join a Debate
-              <ArrowRight
-                size={18}
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              />
-            </Link>
+            />
             <a
               href="#features"
               className="flex items-center gap-2 px-7 py-3.5 text-[1rem] font-semibold rounded-xl
