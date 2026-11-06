@@ -11,7 +11,7 @@ export function TextField({ id, label, icon: Icon, trailing, className = '', ...
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   return (
-    <div>
+    <div className="min-w-0">
       <label htmlFor={fieldId} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/60">{label}</label>
       <div className="relative">
         {Icon && <Icon aria-hidden="true" size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />}
