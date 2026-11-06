@@ -42,7 +42,7 @@ function RoomPreview() {
         <div className="flex items-center justify-center gap-3 border-t border-white/10 bg-[#0a1411] p-4">
           <span className="grid size-10 place-items-center rounded-full bg-white/10 text-white/80"><Headphones size={17} /></span>
           <span className="grid size-10 place-items-center rounded-full bg-white/10 text-white/80"><MessageSquareText size={17} /></span>
-          <span className="flex h-10 items-center gap-2 rounded-full bg-primary/15 px-4 text-xs font-semibold text-primary"><Check size={14} /> You're in control</span>
+          <span className="flex h-10 items-center gap-2 rounded-full bg-primary/15 px-4 text-xs font-semibold text-primary"><Check size={14} /> You&apos;re in control</span>
         </div>
       </div>
       <p className="mt-5 text-center text-[11px] text-white/40">Illustrative room preview · Not a live session</p>
