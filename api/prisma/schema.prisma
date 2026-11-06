@@ -63,6 +63,8 @@ model User {
   blocksMade     Block[]  @relation("Blocker")
   blocksReceived Block[]  @relation("Blocked")
   revokedTokens   RevokedToken[]
+  historyAsFirst  DebateHistory[] @relation("HistoryFirstUser")
+  historyAsSecond DebateHistory[] @relation("HistorySecondUser")
 
   @@map("debate_users")
 }
@@ -136,4 +138,29 @@ model RevokedToken {
 
   @@index([expiresAt])
   @@map("revoked_tokens")
+}
+
+// Stores only server-observed session metadata: NEVER chat, call audio/video,
+// partner identities in API responses, SDP or ICE candidates.
+enum DebateEndReason {
+  COMPLETED
+  ENDED
+}
+
+model DebateHistory {
+  id           String          @id @db.Uuid
+  firstUserId  Int             @map("first_user_id")
+  secondUserId Int             @map("second_user_id")
+  topic        String          @db.VarChar(40)
+  language     String          @db.VarChar(5)
+  mode         String          @db.VarChar(20)
+  startedAt    DateTime        @map("started_at") @db.Timestamptz()
+  endedAt      DateTime        @map("ended_at") @db.Timestamptz()
+  endReason    DebateEndReason @map("end_reason")
+  firstUser    User            @relation("HistoryFirstUser", fields: [firstUserId], references: [id], onDelete: Cascade)
+  secondUser   User            @relation("HistorySecondUser", fields: [secondUserId], references: [id], onDelete: Cascade)
+
+  @@index([firstUserId, endedAt(sort: Desc)])
+  @@index([secondUserId, endedAt(sort: Desc)])
+  @@map("debate_history")
 }
