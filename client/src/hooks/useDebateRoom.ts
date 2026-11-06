@@ -33,9 +33,6 @@ export function useDebateRoom(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configRef = useRef<RTCConfiguration>({ iceServers: [] });
   const searchRef = useRef(0);
-  // Preference changes start a new room; keep the selected values stable for callbacks.
-  const preferencesRef = useRef(preferences);
-  preferencesRef.current = preferences;
   const [status, setStatus] = useState<DebateStatus>("starting");
   const [peerName, setPeerName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,7 +86,7 @@ export function useDebateRoom(
       if (!cancelled && !searching && streamRef.current && socket.connected) {
         searching = true;
         setStatus("searching");
-        socket.emit("find-partner", preferencesRef.current);
+        socket.emit("find-partner", preferences);
       }
     };
     socket.on("connect", start);
@@ -294,7 +291,7 @@ export function useDebateRoom(
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [closePeer, localVideoRef, remoteVideoRef]);
+  }, [closePeer, localVideoRef, remoteVideoRef, preferences]);
   const findNext = useCallback(async () => {
     const socket = socketRef.current;
     if (!socket?.connected || !streamRef.current) {
@@ -319,11 +316,11 @@ export function useDebateRoom(
         return;
       configRef.current = config.data;
       setStatus("searching");
-      socket.emit("find-partner", preferencesRef.current);
+      socket.emit("find-partner", preferences);
     } catch {
       if (version === searchRef.current) setStatus("error");
     }
-  }, [closePeer]);
+  }, [closePeer, preferences]);
   const emitWithAck = useCallback(
     async (event: string, payload?: unknown): Promise<Ack> => {
       const socket = socketRef.current;
