@@ -539,23 +539,23 @@ describe("Debate API (e2e)", () => {
       const offer = once<{ data: { sdp: string } }>(b, "offer");
       a.emit("offer", {
         matchId: ma.matchId,
-        data: { type: "offer", sdp: "x" },
+        data: { type: "offer", sdp: "v=0\\r\\no=- 1 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\nm=audio 9 UDP/TLS/RTP/SAVPF 111\\r\\n" },
       });
-      expect((await offer).data.sdp).toBe("x");
+      expect((await offer).data.sdp).toContain("m=audio");
 
       const answer = once<{ data: { sdp: string } }>(a, "answer");
       b.emit("answer", {
         matchId: mb.matchId,
-        data: { type: "answer", sdp: "y" },
+        data: { type: "answer", sdp: "v=0\\r\\no=- 1 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\nm=audio 9 UDP/TLS/RTP/SAVPF 111\\r\\n" },
       });
-      expect((await answer).data.sdp).toBe("y");
+      expect((await answer).data.sdp).toContain("m=audio");
 
       const ice = once<{ data: { candidate: string } }>(a, "ice-candidate");
       b.emit("ice-candidate", {
         matchId: mb.matchId,
-        data: { candidate: "c1" },
+        data: { candidate: "candidate:1 1 UDP 2122260223 192.0.2.1 5000 typ host" },
       });
-      expect((await ice).data.candidate).toBe("c1");
+      expect((await ice).data.candidate).toContain("candidate:1");
 
       const chat = once<{ text: string }>(b, "chatMessage");
       a.emit("chatMessage", { matchId: ma.matchId, text: "  salam  " });
@@ -611,6 +611,31 @@ describe("Debate API (e2e)", () => {
       const leftC = once(c, "peer-left");
       b.emit("leave");
       await leftC;
+    });
+
+    it("rejects malformed and oversized signaling without leaking to a matched peer", async () => {
+      const a = await connect((await loginAs()).cookie);
+      const b = await connect((await loginAs()).cookie);
+      const waiting = once(a, "waiting");
+      a.emit("find-partner");
+      await waiting;
+      const matchedA = once<{ matchId: string }>(a, "matched");
+      const matchedB = once(b, "matched");
+      b.emit("find-partner");
+      const [match] = await Promise.all([matchedA, matchedB]);
+      const leaked = jest.fn();
+      b.on("offer", leaked);
+      b.on("ice-candidate", leaked);
+      a.emit("offer", { matchId: match.matchId, data: { type: "offer", sdp: "bad" } });
+      a.emit("offer", { matchId: match.matchId, data: { type: "offer", sdp: "v=0".repeat(70_000) } });
+      a.emit("ice-candidate", { matchId: match.matchId, data: { candidate: "invalid" } });
+      a.emit("ice-candidate", { matchId: "expired", data: { candidate: "candidate:1 1 UDP 2 192.0.2.1 55 typ host" } });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(leaked).not.toHaveBeenCalled();
+      const restart = once<{ matchId: string }>(b, "ice-restart-request");
+      a.emit("ice-restart-request", { matchId: match.matchId });
+      expect((await restart).matchId).toBe(match.matchId);
+      a.emit("ice-restart-request", { matchId: match.matchId }); // throttled
     });
 
     it("never matches a user with themselves (two tabs)", async () => {
