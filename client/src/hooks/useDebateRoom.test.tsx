@@ -34,7 +34,7 @@ class Peer {
   onicecandidate = null;
   addTrack = vi.fn();
   close = vi.fn();
-  createOffer = vi.fn(async () => ({ type: "offer", sdp: "offer" }));
+  createOffer = vi.fn(async (_options?: RTCOfferOptions) => ({ type: "offer", sdp: "offer" }));
   createAnswer = vi.fn(async () => ({ type: "answer", sdp: "answer" }));
   setLocalDescription = vi.fn(async () => {});
   setRemoteDescription = vi.fn(async (data) => {
@@ -177,4 +177,27 @@ it("enforces non-speaker audio mute and restores only on an authorized turn", as
   await fire("formal-completed", { matchId: "formal-1" });
   expect(result.current.status).toBe("completed");
   expect(audio.stop).toHaveBeenCalled();
+});
+
+it("restarts ICE once when the peer connection fails", async () => {
+  const { result } = await setup();
+  await fire("matched", { matchId: "recovery", initiator: true });
+  const pc = Peer.instances[0];
+  await act(async () => {
+    pc.connectionState = "failed";
+    pc.onconnectionstatechange?.();
+  });
+  expect(pc.createOffer).toHaveBeenCalledWith({ iceRestart: true });
+  expect(result.current.status).toBe("reconnecting");
+});
+it("non-offerer requests a peer ICE restart rather than creating its own offer", async () => {
+  await setup();
+  await fire("matched", { matchId: "recovery-2", initiator: false });
+  const pc = Peer.instances[0];
+  act(() => {
+    pc.connectionState = "failed";
+    pc.onconnectionstatechange?.();
+  });
+  expect(mocks.emit).toHaveBeenCalledWith("ice-restart-request", { matchId: "recovery-2" });
+  expect(pc.createOffer).not.toHaveBeenCalled();
 });
