@@ -107,6 +107,20 @@ export class AuthController {
     return { iceServers };
   }
 
+  @Get('socket-ticket')
+  @UseGuards(JwtAuthGuard)
+  async socketTicket(
+    @Req() request: Request,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const token = request.cookies?.accessToken as string;
+    return {
+      ticket: await this.authService.issueSocketTicket(user.id, token),
+    };
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {

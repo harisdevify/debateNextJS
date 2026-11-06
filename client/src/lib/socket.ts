@@ -1,12 +1,22 @@
 import { io } from 'socket.io-client';
+import api from './api';
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8800/api/v1';
-
-// Socket.IO runs on the same server as the API (same origin, same port),
-// so by default we just reuse the API origin.
+// The realtime service can remain on a separate host. Auth is delivered
+// through a one-use-in-memory, short-lived ticket fetched from our own origin.
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8800/api/v1';
 export const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || new URL(API_URL).origin;
+  process.env.NEXT_PUBLIC_SOCKET_URL || new URL(backendUrl).origin;
 
-// withCredentials sends the httpOnly auth cookie with the handshake.
-export const createSocket = () => io(SOCKET_URL, { withCredentials: true });
+export const createSocket = () =>
+  io(SOCKET_URL, {
+    autoConnect: true,
+    withCredentials: false,
+    auth: async (callback) => {
+      try {
+        const response = await api.get<{ ticket: string }>('/auth/socket-ticket', { silent: true });
+        callback({ ticket: response.data.ticket });
+      } catch {
+        callback({ ticket: '' });
+      }
+    },
+  });

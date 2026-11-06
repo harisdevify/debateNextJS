@@ -85,6 +85,40 @@ describe("Debate API (e2e)", () => {
       ).toBe("900");
     });
 
+    it("issues a short-lived socket ticket bound to the logged-in session", async () => {
+      await http.get("/api/v1/auth/socket-ticket").expect(401);
+      const { cookie } = await loginAs();
+      const issued = await http.get("/api/v1/auth/socket-ticket")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(issued.headers["cache-control"]).toBe("no-store");
+      expect(typeof issued.body.ticket).toBe("string");
+      expect(issued.body.ticket.split(".")).toHaveLength(3);
+
+      const ticketSocket = io(baseUrl, {
+        transports: ["websocket"],
+        reconnection: false,
+        auth: { ticket: issued.body.ticket },
+      });
+      sockets.push(ticketSocket);
+      await once(ticketSocket, "connect");
+
+      await http.post("/api/v1/auth/logout")
+        .set("Origin", "http://localhost:3000")
+        .set("Cookie", cookie)
+        .expect(200);
+      await http.get("/api/v1/auth/socket-ticket")
+        .set("Cookie", cookie).expect(401);
+      const rejected = io(baseUrl, {
+        transports: ["websocket"],
+        reconnection: false,
+        auth: { ticket: issued.body.ticket },
+      });
+      sockets.push(rejected);
+      const error = await once<Error>(rejected, "connect_error");
+      expect(error.message).toBe("Not authenticated");
+    });
+
     it("serves short-lived TURN credentials only after authentication", async () => {
       await http.get("/api/v1/auth/ice-servers").expect(401);
       const { cookie } = await loginAs();
