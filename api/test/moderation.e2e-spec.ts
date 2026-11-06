@@ -124,6 +124,50 @@ describe('admin moderation (real PostgreSQL)', () => {
       .send({ role: 'ADMIN' })
       .expect(400);
   });
+  it('protects overview/audit, counts open reports and searches by reported user email', async () => {
+    await http.get('/api/v1/admin/overview').expect(401);
+    await http.get('/api/v1/admin/audit').set('Cookie', member.cookie).expect(403);
+    const overview = await http.get('/api/v1/admin/overview')
+      .set('Cookie', admin.cookie).expect(200);
+    expect(overview.body).toMatchObject({
+      pendingReports: expect.any(Number),
+      reviewedReports: expect.any(Number),
+      suspendedUsers: expect.any(Number),
+      bannedUsers: expect.any(Number),
+      recentActions: expect.any(Number),
+    });
+    expect(overview.body.pendingReports).toBeGreaterThanOrEqual(1);
+
+    const filtered = await http.get('/api/v1/admin/reports')
+      .query({ status: 'OPEN', search: member.email.toUpperCase() })
+      .set('Cookie', admin.cookie).expect(200);
+    expect(filtered.body.items.some((item: { id: number }) => item.id === reportId)).toBe(true);
+    const empty = await http.get('/api/v1/admin/reports')
+      .query({ status: 'OPEN', search: 'unmatched-unique-name-87654321' })
+      .set('Cookie', admin.cookie).expect(200);
+    expect(empty.body.items).toHaveLength(0);
+  });
+
+  it('exposes private paginated moderation audit actions without passwords', async () => {
+    await action('WARN').expect(201);
+    const audit = await http.get('/api/v1/admin/audit')
+      .query({ kind: 'WARN' }).set('Cookie', admin.cookie).expect(200);
+    expect(audit.body.page).toBe(1);
+    expect(audit.body.pageSize).toBe(20);
+    const item = audit.body.items.find((entry: { reportId: number }) => entry.reportId === reportId);
+    expect(item).toMatchObject({
+      kind: 'WARN', reason: 'Reviewed test evidence',
+      actor: { id: admin.id }, target: { id: member.id },
+    });
+    expect(JSON.stringify(audit.body)).not.toContain('"password"');
+    await http.get('/api/v1/admin/audit')
+      .query({ page: 0 }).set('Cookie', admin.cookie).expect(400);
+    await http.get('/api/v1/admin/audit')
+      .query({ kind: 'INVALID' }).set('Cookie', admin.cookie).expect(400);
+    await http.get('/api/v1/admin/audit')
+      .set('Cookie', member.cookie).expect(403);
+  });
+
   it('atomically reviews once when two actions race', async () => {
     const results = await Promise.all([action('WARN'), action('DISMISS')]);
     expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
