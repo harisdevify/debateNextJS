@@ -84,3 +84,18 @@ it('keeps the reason after a failed save', async () => {
     (screen.getByLabelText('Internal reason') as HTMLTextAreaElement).value
   ).toBe('Need more evidence');
 });
+
+it('requires exact name confirmation for ban', async () => {
+  const user = userEvent.setup();
+  const submit = vi.fn().mockResolvedValue(true);
+  render(<ActionForm name="Member One" report={false} restricted={false} onSubmit={submit} />);
+  await user.selectOptions(screen.getByLabelText('Action'), 'BAN');
+  await user.type(screen.getByLabelText('Internal reason'), 'Repeated serious harassment');
+  await user.click(screen.getByRole('button', { name: 'Review action' }));
+  const confirm = screen.getByRole('button', { name: 'Confirm action' });
+  expect((confirm as HTMLButtonElement).disabled).toBe(true);
+  await user.type(screen.getByRole('textbox', { name: 'Confirm account name' }), 'Member One');
+  expect((confirm as HTMLButtonElement).disabled).toBe(false);
+  await user.click(confirm);
+  await waitFor(() => expect(submit).toHaveBeenCalledWith({ action: 'BAN', reason: 'Repeated serious harassment' }));
+});

@@ -8,6 +8,8 @@ import {
 } from 'react';
 import api from '@/lib/api';
 import { ActionForm, type ActionBody } from './ActionForm';
+import { ModerationOverview } from './ModerationOverview';
+import { ModerationAudit } from './ModerationAudit';
 import {
   actionLabels,
   type AdminReport,
@@ -64,7 +66,7 @@ function Status({ user }: { user: AdminUser }) {
   );
 }
 export function AdminPanel() {
-  const [tab, setTab] = useState<'reports' | 'users'>('reports');
+  const [tab, setTab] = useState<'reports' | 'users' | 'audit'>('reports');
   const [filter, setFilter] = useState('OPEN');
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState('');
@@ -83,7 +85,7 @@ export function AdminPanel() {
   const [refresh, setRefresh] = useState(0);
   const requestId = useRef(0);
   useEffect(() => {
-    if (detail) return;
+    if (detail || tab === 'audit') return;
     const controller = new AbortController();
     let active = true;
     // Defer state updates into an async request lifecycle.
@@ -96,7 +98,7 @@ export function AdminPanel() {
           {
             params: {
               page,
-              ...(tab === 'reports' ? { status: filter } : { search: term }),
+              ...(tab === 'reports' ? { status: filter, search: term } : { search: term }),
             },
             signal: controller.signal,
             silent: true,
@@ -156,9 +158,11 @@ export function AdminPanel() {
     setRefresh((n) => n + 1);
     return true;
   };
-  const switchTab = (next: 'reports' | 'users') => {
+  const switchTab = (next: 'reports' | 'users' | 'audit') => {
     requestId.current++;
     setTab(next);
+    setSearch('');
+    setTerm('');
     setPage(1);
     setDetail(null);
     setList(null);
@@ -181,9 +185,10 @@ export function AdminPanel() {
         <p className="text-sm font-semibold text-primary">Admin workspace</p>
         <h1 className="mt-2 text-3xl font-bold">Keep debates respectful</h1>
         <p className="mt-3 text-muted">
-          Review reports, manage account access and see every moderation action.
+          Review incoming reports, make accountable decisions and inspect moderation actions.
         </p>
       </header>
+      <ModerationOverview refresh={refresh} />
       <nav aria-label="Admin sections" className="my-6 flex flex-wrap gap-3">
         <button
           className={button}
@@ -199,6 +204,7 @@ export function AdminPanel() {
         >
           Users
         </button>
+        <button type="button" className={button} aria-pressed={tab === 'audit'} onClick={() => switchTab('audit')}>Audit log</button>
       </nav>
       {notice && (
         <p
@@ -231,7 +237,7 @@ export function AdminPanel() {
           Loading...
         </p>
       )}
-      {detail && user ? (
+      {tab === 'audit' ? <ModerationAudit refresh={refresh} /> : detail && user ? (
         <>
           <button
             className={button}
@@ -259,6 +265,7 @@ export function AdminPanel() {
               {detail.type === 'reports' && (
                 <div className="mt-6 space-y-3">
                   <h3 className="font-bold">Report #{detail.data.id}</h3>
+                  <p className="text-xs text-muted">Review reported information and previous actions before applying restrictions.</p>
                   <p className="text-sm">
                     Reason:{' '}
                     {detail.data.reason.replaceAll('_', ' ').toLowerCase()}
@@ -345,39 +352,25 @@ export function AdminPanel() {
       ) : (
         <section>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-            {tab === 'reports' ? (
-              <label className="text-sm">
-                Show reports
-                <select
-                  value={filter}
-                  onChange={(e) => {
-                    setPage(1);
-                    setFilter(e.target.value);
-                  }}
-                  className="ml-0 mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 sm:ml-3 sm:mt-0 sm:inline-block sm:w-auto"
-                >
+            {tab === 'reports' && (
+              <label className="text-sm">Show reports
+                <select value={filter} onChange={(event) => { setPage(1); setFilter(event.target.value); }}
+                  className="ml-0 mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 sm:ml-3 sm:mt-0 sm:inline-block sm:w-auto">
                   <option value="OPEN">Needs review</option>
                   <option value="REVIEWED">Reviewed</option>
                 </select>
               </label>
-            ) : (
-              <form
-                onSubmit={submitSearch}
-                className="flex w-full max-w-lg flex-wrap gap-2 sm:flex-nowrap"
-              >
-                <label className="min-w-[12rem] flex-1">
-                  <span className="sr-only">Search name or email</span>
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    maxLength={150}
-                    placeholder="Search name or email"
-                    className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 focus-visible:ring-2 focus-visible:ring-primary/30"
-                  />
-                </label>
-                <button className={button}>Search</button>
-              </form>
             )}
+            <form onSubmit={submitSearch} className="flex w-full max-w-lg flex-wrap gap-2 sm:flex-nowrap">
+              <label className="min-w-[12rem] flex-1">
+                <span className="sr-only">Search name or email</span>
+                <input value={search} onChange={(event) => setSearch(event.target.value)}
+                  maxLength={150} placeholder={tab === 'reports' ? 'Search reporter or reported user' : 'Search name or email'}
+                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 focus-visible:ring-2 focus-visible:ring-primary/30"/>
+              </label>
+              <button type="submit" className={button}>Search</button>
+            </form>
+            {term && <button type="button" className={button} onClick={() => { setSearch(''); setTerm(''); setPage(1); }}>Clear search</button>}
             <button
               className={button}
               onClick={() => setRefresh((n) => n + 1)}
@@ -410,6 +403,8 @@ export function AdminPanel() {
                     <p className="mt-2 text-sm">
                       {item.reason.replaceAll('_', ' ').toLowerCase()}
                     </p>
+                    <p className="mt-2 line-clamp-2 break-words text-sm text-muted">{item.details || 'No additional details provided.'}</p>
+                    <p className="mt-2 text-xs text-muted">Reported by {item.reporter.fullname}</p>
                     <button
                       className={`${button} mt-4`}
                       onClick={() => void open('reports', item.id)}
