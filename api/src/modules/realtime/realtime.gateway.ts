@@ -37,6 +37,7 @@ type DebateSocket = Socket & {
     preferences?: DebatePreferencesDto;
     tokenHash?: string;
     matchId?: string;
+    matchStartedAt?: number;
     peerId?: string | null;
     /** user id of the latest partner; kept after the debate ends so it can still be reported */
     lastPeerUserId?: number | null;
@@ -120,6 +121,31 @@ export class RealtimeGateway
   private readonly queue: string[] = [];
   private readonly formalSessions = new Map<string, FormalSession>();
   private readonly formalByUser = new Map<number, string>();
+
+  /** Best-effort, idempotent metadata persistence; never records conversation content. */
+  private recordEndedDebate(entry: {
+    id: string; firstUserId: number; secondUserId: number;
+    topic: string; language: string; mode: string;
+    startedAt: number; endedAt: number; completed: boolean;
+  }): void {
+    void this.prisma.debateHistory.upsert({
+      where: { id: entry.id },
+      create: {
+        id: entry.id,
+        firstUserId: entry.firstUserId,
+        secondUserId: entry.secondUserId,
+        topic: entry.topic,
+        language: entry.language,
+        mode: entry.mode,
+        startedAt: new Date(entry.startedAt),
+        endedAt: new Date(entry.endedAt),
+        endReason: entry.completed ? 'COMPLETED' : 'ENDED',
+      },
+      update: {}, // A second leave/disconnect must not duplicate or overwrite.
+    }).catch((error: unknown) => {
+      console.error('Unable to persist debate history:', error);
+    });
+  }
 
   constructor(
     private readonly jwtService: JwtService,
@@ -365,7 +391,9 @@ export class RealtimeGateway
     }
 
     const matchId = randomUUID();
+    const matchedAt = Date.now();
     socket.data.matchId = partner.data.matchId = matchId;
+    socket.data.matchStartedAt = partner.data.matchStartedAt = matchedAt;
     socket.data.peerId = partner.id;
     partner.data.peerId = socket.id;
     socket.data.lastPeerUserId = partner.data.user?.id ?? null;
@@ -385,7 +413,7 @@ export class RealtimeGateway
     if (preferences.mode === DebateMode.FORMAL) {
       const session: FormalSession = {
         matchId,
-        startedAt: Date.now(),
+        startedAt: matchedAt,
         preferences,
         participants: [
           { userId: partner.data.user!.id, fullname: partner.data.user!.fullname, socketId: partner.id },
@@ -425,6 +453,7 @@ export class RealtimeGateway
     participant.socketId = socket.id;
     socket.data.preferences = session.preferences;
     socket.data.matchId = session.matchId;
+    socket.data.matchStartedAt = session.startedAt;
     socket.data.lastPeerUserId = session.participants.find((p) => p.userId !== userId)?.userId;
     const timer = session.reconnectTimers.get(userId);
     if (timer) clearTimeout(timer);
@@ -476,6 +505,14 @@ export class RealtimeGateway
 
   private endFormalSession(session: FormalSession, reason: 'completed' | 'left'): void {
     if (!this.formalSessions.delete(session.matchId)) return;
+    const [first, second] = session.participants;
+    this.recordEndedDebate({
+      id: session.matchId, firstUserId: first.userId, secondUserId: second.userId,
+      topic: session.preferences.topic, language: session.preferences.language,
+      mode: session.preferences.mode, startedAt: session.startedAt,
+      endedAt: reason === 'completed' ? session.startedAt + 600_000 : Date.now(),
+      completed: reason === 'completed',
+    });
     if (session.timer) clearTimeout(session.timer);
     for (const timer of session.reconnectTimers.values()) clearTimeout(timer);
     for (const participant of session.participants) {
@@ -485,6 +522,7 @@ export class RealtimeGateway
       if (!socket) continue;
       socket.data.peerId = null;
       socket.data.matchId = undefined;
+      socket.data.matchStartedAt = undefined;
       socket.data.searchVersion = (socket.data.searchVersion ?? 0) + 1;
       socket.emit(reason === 'completed' ? 'formal-completed' : 'peer-left',
         { matchId: session.matchId, endedAt: session.startedAt + 600_000 });
@@ -651,7 +689,19 @@ export class RealtimeGateway
       return;
     }
     socket.data.searchVersion = (socket.data.searchVersion ?? 0) + 1;
+    const matchId = socket.data.matchId;
+    const startedAt = socket.data.matchStartedAt;
+    const otherUserId = socket.data.lastPeerUserId;
+    const preferences = socket.data.preferences;
+    if (matchId && startedAt && otherUserId && socket.data.user && preferences) {
+      this.recordEndedDebate({
+        id: matchId, firstUserId: socket.data.user.id, secondUserId: otherUserId,
+        topic: preferences.topic, language: preferences.language,
+        mode: preferences.mode, startedAt, endedAt: Date.now(), completed: false,
+      });
+    }
     socket.data.matchId = undefined;
+    socket.data.matchStartedAt = undefined;
     const queueIndex = this.queue.indexOf(socket.id);
     if (queueIndex !== -1) this.queue.splice(queueIndex, 1);
     const peerId = socket.data.peerId;
@@ -662,6 +712,7 @@ export class RealtimeGateway
     if (peer?.data.peerId === socket.id) {
       peer.data.peerId = null;
       peer.data.matchId = undefined;
+      peer.data.matchStartedAt = undefined;
       peer.emit("peer-left");
     }
   }

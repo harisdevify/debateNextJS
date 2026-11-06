@@ -251,6 +251,10 @@ function ProfileContent() {
                     <Edit3 size={14} />
                     {editing ? 'Cancel' : 'Edit Profile'}
                   </button>
+                  <Link href="/history" className="flex min-h-10 items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/75 transition-colors hover:border-primary/30 hover:text-primary">
+                    <Calendar size={14} />
+                    History
+                  </Link>
                   <Link
                     href="/video"
                     className="group flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold

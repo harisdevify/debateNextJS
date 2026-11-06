@@ -780,6 +780,49 @@ describe("Debate API (e2e)", () => {
       return { u1, u2, a, b, matchId: match.matchId };
     }
 
+
+    it("records a session only when it ends and exposes history solely to participants", async () => {
+      const { u1, u2, a, b, matchId } = await matchedPair();
+      const outsider = await loginAs();
+      await http.get('/api/v1/debates/history').expect(401);
+      const initial = await http.get('/api/v1/debates/history')
+        .set('Cookie', u1.cookie).expect(200);
+      expect(initial.body.items.find((item: { id: string }) => item.id === matchId)).toBeUndefined();
+
+      const notified = once(b, 'peer-left');
+      a.emit('leave');
+      await notified;
+
+      let participantHistory: Array<{ id: string; endReason: string; durationSeconds: number }> = [];
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const response = await http.get('/api/v1/debates/history')
+          .set('Cookie', u1.cookie).expect(200);
+        participantHistory = response.body.items;
+        if (participantHistory.some((item) => item.id === matchId)) break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      const saved = participantHistory.find((item) => item.id === matchId);
+      expect(saved).toMatchObject({ endReason: 'ENDED', topic: 'religion', language: 'en', mode: 'friendly' });
+      expect(saved!.durationSeconds).toBeGreaterThanOrEqual(0);
+      expect(Object.keys(saved!)).toEqual(expect.arrayContaining(['startedAt', 'endedAt']));
+      expect(saved).not.toHaveProperty('firstUserId');
+      expect(saved).not.toHaveProperty('secondUserId');
+      expect(saved).not.toHaveProperty('partner');
+
+      const otherParticipant = await http.get('/api/v1/debates/history')
+        .set('Cookie', u2.cookie).expect(200);
+      expect(otherParticipant.body.items.some((item: { id: string }) => item.id === matchId)).toBe(true);
+      const unrelated = await http.get('/api/v1/debates/history')
+        .set('Cookie', outsider.cookie).expect(200);
+      expect(unrelated.body.items).toHaveLength(0);
+
+      a.emit('leave'); // repeated leave must not record another row
+      expect(await prisma.debateHistory.count({ where: { id: matchId } })).toBe(1);
+      await http.get('/api/v1/debates/history?page=0').set('Cookie', u1.cookie).expect(400);
+      await http.get('/api/v1/debates/history?page=2.5').set('Cookie', u1.cookie).expect(400);
+      await http.get('/api/v1/debates/history?page=10001').set('Cookie', u1.cookie).expect(400);
+    });
+
     it("report-partner stores a report (also after the partner left)", async () => {
       const { u1, u2, a, b } = await matchedPair();
       const idOf = async (email: string) =>
