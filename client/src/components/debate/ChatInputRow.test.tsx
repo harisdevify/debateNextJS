@@ -8,10 +8,10 @@ it("keeps a rejected draft and clears it only after successful acknowledgement",
   render(<ChatInputRow onSend={send} />);
   const input = screen.getByRole("textbox") as HTMLTextAreaElement;
   await user.type(input, "hello");
-  await user.click(screen.getByRole("button", { name: "Send" }));
+  await user.click(screen.getByRole("button", { name: "Send message" }));
   await waitFor(() => expect(input.disabled).toBe(false));
   expect(input.value).toBe("hello");
-  await user.click(screen.getByRole("button", { name: "Send" }));
+  await user.click(screen.getByRole("button", { name: "Send message" }));
   await waitFor(() => expect(input.value).toBe(""));
   expect(send).toHaveBeenCalledTimes(2);
   expect(input.maxLength).toBe(1000);
