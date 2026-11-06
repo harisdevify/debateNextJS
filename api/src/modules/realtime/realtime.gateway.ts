@@ -121,6 +121,15 @@ export class RealtimeGateway
   private readonly queue: string[] = [];
   private readonly formalSessions = new Map<string, FormalSession>();
   private readonly formalByUser = new Map<number, string>();
+  private readonly pendingHistoryWrites = new Set<Promise<unknown>>();
+
+  /** Wait for ongoing session metadata writes before database teardown/shutdown. */
+  async drainHistoryWrites(): Promise<void> {
+    while (this.pendingHistoryWrites.size) {
+      await Promise.allSettled([...this.pendingHistoryWrites]);
+    }
+  }
+
 
   /** Best-effort, idempotent metadata persistence; never records conversation content. */
   private recordEndedDebate(entry: {
@@ -128,7 +137,7 @@ export class RealtimeGateway
     topic: string; language: string; mode: string;
     startedAt: number; endedAt: number; completed: boolean;
   }): void {
-    void this.prisma.debateHistory.upsert({
+    const pending = this.prisma.debateHistory.upsert({
       where: { id: entry.id },
       create: {
         id: entry.id,
@@ -144,7 +153,10 @@ export class RealtimeGateway
       update: {}, // A second leave/disconnect must not duplicate or overwrite.
     }).catch((error: unknown) => {
       console.error('Unable to persist debate history:', error);
+    }).finally(() => {
+      this.pendingHistoryWrites.delete(pending);
     });
+    this.pendingHistoryWrites.add(pending);
   }
 
   constructor(
