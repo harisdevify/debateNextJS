@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { useDebateRoom } from "./useDebateRoom";
+import type { DebatePreferences } from "@/types";
 const mocks = vi.hoisted(() => ({
   handlers: {} as Record<string, (...args: never[]) => unknown>,
   emit: vi.fn(),
@@ -49,11 +50,13 @@ const fire = async (event: string, payload?: unknown) => {
     await mocks.handlers[event](payload as never);
   });
 };
-const setup = async () => {
+const setup = async (preferences?: DebatePreferences) => {
   const local = { current: document.createElement("video") };
   const remote = { current: document.createElement("video") };
-  const hook = renderHook(() => useDebateRoom(local, remote));
-  await waitFor(() => expect(mocks.emit).toHaveBeenCalledWith("find-partner"));
+  const hook = renderHook(() => useDebateRoom(local, remote, preferences));
+  await waitFor(() => expect(mocks.emit).toHaveBeenCalledWith("find-partner", preferences ?? {
+    topic: "religion", language: "en", mode: "friendly",
+  }));
   return hook;
 };
 beforeEach(() => {
@@ -137,4 +140,12 @@ it("stops camera tracks and closes the peer on unmount", async () => {
   unmount();
   expect(mocks.stop).toHaveBeenCalled();
   expect(Peer.instances[0].close).toHaveBeenCalled();
+});
+
+it("sends selected preferences for initial search and Next", async () => {
+  const preferences: DebatePreferences = { topic: "technology", language: "ur", mode: "formal" };
+  const { result } = await setup(preferences);
+  expect(mocks.emit).toHaveBeenCalledWith("find-partner", preferences);
+  await act(async () => { await result.current.findNext(); });
+  expect(mocks.emit).toHaveBeenLastCalledWith("find-partner", preferences);
 });

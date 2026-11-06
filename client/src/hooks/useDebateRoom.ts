@@ -1,7 +1,8 @@
 "use client";
 import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
-import type { ChatMessage, DebateStatus, MatchedPayload } from "@/types";
+import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences } from "@/types";
+import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
   useCallback,
   useEffect,
@@ -22,6 +23,7 @@ interface Signal<T> {
 export function useDebateRoom(
   localVideoRef: RefObject<HTMLVideoElement | null>,
   remoteVideoRef: RefObject<HTMLVideoElement | null>,
+  preferences: DebatePreferences = DEFAULT_DEBATE_PREFERENCES,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -31,6 +33,9 @@ export function useDebateRoom(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const configRef = useRef<RTCConfiguration>({ iceServers: [] });
   const searchRef = useRef(0);
+  // Preference changes start a new room; keep the selected values stable for callbacks.
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
   const [status, setStatus] = useState<DebateStatus>("starting");
   const [peerName, setPeerName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,7 +89,7 @@ export function useDebateRoom(
       if (!cancelled && !searching && streamRef.current && socket.connected) {
         searching = true;
         setStatus("searching");
-        socket.emit("find-partner");
+        socket.emit("find-partner", preferencesRef.current);
       }
     };
     socket.on("connect", start);
@@ -314,7 +319,7 @@ export function useDebateRoom(
         return;
       configRef.current = config.data;
       setStatus("searching");
-      socket.emit("find-partner");
+      socket.emit("find-partner", preferencesRef.current);
     } catch {
       if (version === searchRef.current) setStatus("error");
     }

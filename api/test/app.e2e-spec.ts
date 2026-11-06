@@ -385,6 +385,83 @@ describe("Debate API (e2e)", () => {
       );
     });
 
+    it("matches only identical topic, language and mode without skipping compatible FIFO entries", async () => {
+      const a = await connect((await loginAs()).cookie);
+      const b = await connect((await loginAs()).cookie);
+      const c = await connect((await loginAs()).cookie);
+      const d = await connect((await loginAs()).cookie);
+      const technology = { topic: "technology", language: "ur", mode: "formal" };
+      const science = { topic: "science", language: "ur", mode: "formal" };
+      const wrongLanguage = { topic: "technology", language: "en", mode: "formal" };
+      const wrongMode = { topic: "technology", language: "ur", mode: "friendly" };
+      const wa = once(a, "waiting");
+      a.emit("find-partner", technology);
+      await wa;
+      const wb = once(b, "waiting");
+      b.emit("find-partner", science);
+      await wb;
+      const wc = once(c, "waiting");
+      c.emit("find-partner", wrongLanguage);
+      await wc;
+      const invalid = once<{ message: string }>(d, "search-error");
+      d.emit("find-partner", { topic: "technology", language: "invalid", mode: "formal" });
+      expect((await invalid).message).toMatch(/valid topic/);
+      const waitingD = once(d, "waiting");
+      d.emit("find-partner", wrongMode);
+      await waitingD;
+      const e = await connect((await loginAs()).cookie);
+      const matchedA = once<{ matchId: string; preferences: typeof technology }>(a, "matched");
+      const matchedE = once<{ matchId: string; preferences: typeof technology }>(e, "matched");
+      e.emit("find-partner", technology);
+      const [first, second] = await Promise.all([matchedA, matchedE]);
+      expect(first.matchId).toBe(second.matchId);
+      expect(first.preferences).toEqual(technology);
+      expect(second.preferences).toEqual(technology);
+      // b/c/d remain in the queue and can each meet their compatible partner.
+      const f = await connect((await loginAs()).cookie);
+      const matchedB = once(b, "matched");
+      const matchedF = once(f, "matched");
+      f.emit("find-partner", science);
+      await Promise.all([matchedB, matchedF]);
+      const g = await connect((await loginAs()).cookie);
+      const matchedC = once(c, "matched");
+      const matchedG = once(g, "matched");
+      g.emit("find-partner", wrongLanguage);
+      await Promise.all([matchedC, matchedG]);
+      const h = await connect((await loginAs()).cookie);
+      const matchedD = once(d, "matched");
+      const matchedH = once(h, "matched");
+      h.emit("find-partner", wrongMode);
+      await Promise.all([matchedD, matchedH]);
+    });
+
+    it("keeps the selected preferences across Next and still enforces one active tab", async () => {
+      const { cookie } = await loginAs();
+      const a = await connect(cookie);
+      const secondTab = await connect(cookie);
+      const partner = await connect((await loginAs()).cookie);
+      const preferences = { topic: "science", language: "en", mode: "friendly" };
+      const waiting = once(a, "waiting");
+      a.emit("find-partner", preferences);
+      await waiting;
+      const busy = once(secondTab, "debate-already-active");
+      secondTab.emit("find-partner", preferences);
+      await busy;
+      const matchedA = once(a, "matched");
+      const matchedPartner = once(partner, "matched");
+      partner.emit("find-partner", preferences);
+      await Promise.all([matchedA, matchedPartner]);
+      const peerLeft = once(partner, "peer-left");
+      a.emit("leave");
+      await peerLeft;
+      const nextWaiting = once(a, "waiting");
+      a.emit("find-partner", preferences);
+      await nextWaiting;
+      const blockedSecond = once(secondTab, "debate-already-active");
+      secondTab.emit("find-partner", preferences);
+      await blockedSecond;
+    });
+
     it("matches two users, relays signaling + chat only to the partner", async () => {
       const [u1, u2, u3] = [await loginAs(), await loginAs(), await loginAs()];
       const a = await connect(u1.cookie);

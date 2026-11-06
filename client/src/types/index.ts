@@ -46,6 +46,12 @@ export interface ChatMessage {
   sender: 'me' | 'other';
 }
 
+export interface DebatePreferences {
+  topic: 'religion' | 'science' | 'technology' | 'education' | 'everyday-life';
+  language: 'ur' | 'en';
+  mode: 'friendly' | 'formal';
+}
+
 /** Error body returned by the API: { message } */
 export interface ApiErrorBody {
   /** A single message, or a list for validation errors. */
@@ -56,5 +62,6 @@ export interface ApiErrorBody {
 export interface MatchedPayload {
   matchId: string;
   initiator: boolean;
+  preferences?: DebatePreferences;
   peer?: { fullname?: string };
 }
