@@ -138,7 +138,7 @@ it("stops camera tracks and closes the peer on unmount", async () => {
   const { unmount } = await setup();
   await fire("matched", { matchId: "first", initiator: false });
   unmount();
-  expect(mocks.stop).toHaveBeenCalled();
+  await waitFor(() => expect(mocks.stop).toHaveBeenCalled());
   expect(Peer.instances[0].close).toHaveBeenCalled();
 });
 
@@ -200,4 +200,51 @@ it("non-offerer requests a peer ICE restart rather than creating its own offer",
   });
   expect(mocks.emit).toHaveBeenCalledWith("ice-restart-request", { matchId: "recovery-2" });
   expect(pc.createOffer).not.toHaveBeenCalled();
+});
+
+it("cancels waiting without releasing media, ignores a delayed match, and resumes by retrying", async () => {
+  const { result } = await setup();
+  expect(result.current.searchStartedAt).not.toBeNull();
+  await act(async () => result.current.cancelSearch());
+  expect(result.current.status).toBe("idle");
+  expect(result.current.searchStartedAt).toBeNull();
+  expect(mocks.emit).toHaveBeenCalledWith("leave");
+  expect(mocks.stop).not.toHaveBeenCalled();
+  await fire("waiting");
+  expect(result.current.status).toBe("idle");
+  await fire("matched", { matchId: "late", initiator: true });
+  expect(Peer.instances).toHaveLength(0);
+  await act(async () => { await result.current.retrySearch(); });
+  expect(result.current.status).toBe("searching");
+  expect(mocks.emit).toHaveBeenLastCalledWith("find-partner", { topic: "religion", language: "en", mode: "friendly" });
+  await fire("waiting");
+  expect(result.current.searchConfirmed).toBe(true);
+});
+it("preserves a formal debate while the peer reconnects", async () => {
+  const pref: DebatePreferences = { topic: "science", language: "en", mode: "formal" };
+  const { result } = await setup(pref);
+  await fire("matched", { matchId: "formal-1", initiator: false });
+  expect(Peer.instances).toHaveLength(1);
+  await fire("peer-reconnecting", { matchId: "formal-1" });
+  expect(result.current.status).toBe("reconnecting");
+  await fire("matched", { matchId: "formal-1", initiator: false });
+  expect(Peer.instances).toHaveLength(2);
+  expect(result.current.status).toBe("connecting");
+});
+it("uses a handed-off preview stream instead of asking permission twice", async () => {
+  const track = { stop: vi.fn(), enabled: true, getAudioTracks: vi.fn() };
+  const stream = {
+    getTracks: () => [track],
+    getVideoTracks: () => [],
+    getAudioTracks: () => [],
+  } as unknown as MediaStream;
+  const local = { current: document.createElement("video") };
+  const remote = { current: document.createElement("video") };
+  const getUserMedia = vi.spyOn(navigator.mediaDevices, "getUserMedia");
+  const hook = renderHook(() => useDebateRoom(local, remote, { topic: "religion", language: "en", mode: "friendly" }, stream));
+  await waitFor(() => expect(mocks.emit).toHaveBeenCalledWith("find-partner", { topic: "religion", language: "en", mode: "friendly" }));
+  expect(getUserMedia).not.toHaveBeenCalled();
+  hook.unmount();
+  await waitFor(() => expect(track.stop).toHaveBeenCalled());
+  getUserMedia.mockRestore();
 });

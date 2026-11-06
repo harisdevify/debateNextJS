@@ -38,6 +38,7 @@ export function useDebateRoom(
   const searchRef = useRef(0);
   const searchingRef = useRef(false);
   const pausedRef = useRef(false);
+  const awaitingReconnectRef = useRef(false);
   const effectVersionRef = useRef(0);
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const [searchConfirmed, setSearchConfirmed] = useState(false);
@@ -162,7 +163,7 @@ export function useDebateRoom(
       setSearchStartedAt(null);
       setSearchConfirmed(false);
       closePeer();
-      setStatus("reconnecting");
+      setStatus(pausedRef.current ? "idle" : "reconnecting");
     });
     socket.on("account-restricted", ({ message }: { message: string }) => {
       searchingRef.current = false;
@@ -199,6 +200,7 @@ export function useDebateRoom(
       const track = streamRef.current?.getAudioTracks()[0];
       if (track) track.enabled = false;
       setMicOn(false);
+      awaitingReconnectRef.current = true;
       closePeer();
       setStatus("reconnecting");
     });
@@ -234,12 +236,13 @@ export function useDebateRoom(
       "matched",
       async ({ matchId, initiator, peer }: MatchedPayload) => {
         if (cancelled) return;
-        if (pausedRef.current || !searchingRef.current) {
+        if (pausedRef.current || (!searchingRef.current && !awaitingReconnectRef.current)) {
           // A delayed match after cancelling must not start a call.
           socket.emit("leave");
           return;
         }
         searchingRef.current = false;
+        awaitingReconnectRef.current = false;
         setSearchStartedAt(null);
         setSearchConfirmed(false);
         closePeer();
@@ -367,6 +370,7 @@ export function useDebateRoom(
       toast.error(message || "Could not search. Wait a few seconds and try again.");
     });
     socket.on("peer-left", () => {
+      awaitingReconnectRef.current = false;
       searchingRef.current = false;
       setSearchStartedAt(null);
       setSearchConfirmed(false);
@@ -477,6 +481,7 @@ export function useDebateRoom(
   }, [closePeer, localVideoRef, remoteVideoRef, preferences, initialStream]);
   const cancelSearch = useCallback(() => {
     pausedRef.current = true;
+    awaitingReconnectRef.current = false;
     searchingRef.current = false;
     searchRef.current++;
     socketRef.current?.emit("leave");
@@ -496,6 +501,7 @@ export function useDebateRoom(
     }
     const version = ++searchRef.current;
     pausedRef.current = false;
+    awaitingReconnectRef.current = false;
     searchingRef.current = false;
     socket.emit("leave");
     closePeer();
