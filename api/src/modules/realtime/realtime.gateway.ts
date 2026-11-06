@@ -391,8 +391,9 @@ export class RealtimeGateway
     }
 
     const matchId = randomUUID();
+    const matchedAt = Date.now();
     socket.data.matchId = partner.data.matchId = matchId;
-    socket.data.matchStartedAt = partner.data.matchStartedAt = Date.now();
+    socket.data.matchStartedAt = partner.data.matchStartedAt = matchedAt;
     socket.data.peerId = partner.id;
     partner.data.peerId = socket.id;
     socket.data.lastPeerUserId = partner.data.user?.id ?? null;
@@ -412,7 +413,7 @@ export class RealtimeGateway
     if (preferences.mode === DebateMode.FORMAL) {
       const session: FormalSession = {
         matchId,
-        startedAt: socket.data.matchStartedAt,
+        startedAt: matchedAt,
         preferences,
         participants: [
           { userId: partner.data.user!.id, fullname: partner.data.user!.fullname, socketId: partner.id },
