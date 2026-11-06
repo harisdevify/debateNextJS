@@ -73,6 +73,7 @@ export default function Header() {
       : user
       ? [
           { href: '/profile', label: 'Profile' },
+          { href: '/history', label: 'History' },
           { href: '/video', label: 'Debate' },
         ]
       : [
