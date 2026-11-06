@@ -61,8 +61,8 @@ const fields = [
 
 const perks = [
   'Join live Islamic debates instantly',
-  'Secure, moderated sessions',
-  'Connect with scholars worldwide',
+  'Report and block to keep discussions respectful',
+  'Connect with others who share discussion interests',
 ];
 
 export default function SignUpPage() {

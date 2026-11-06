@@ -157,18 +157,15 @@ function ProfileContent() {
         <div className="relative z-10 max-w-[900px] mx-auto">
           {/* ── TOP PROFILE CARD ── */}
           <div
-            className="relative rounded-3xl overflow-hidden border border-white/[0.08] mb-6
+            className="relative rounded-[26px] overflow-hidden border border-white/15 mb-7 shadow-[0_20px_55px_rgba(0,0,0,.25)]
                           bg-[rgba(10,24,22,0.85)]"
           >
             {/* Banner */}
             <div
-              className="h-36 w-full"
+              className="h-40 w-full sm:h-44"
               style={{
-                background:
-                  'linear-gradient(135deg, rgba(0,191,166,0.25) 0%, rgba(0,100,90,0.15) 50%, rgba(10,24,22,0.8) 100%)',
-                backgroundImage:
-                  'radial-gradient(rgba(0,191,166,0.15) 1px, transparent 1px)',
-                backgroundSize: '18px 18px',
+                background: 'linear-gradient(115deg, #163d32 0%, #103128 38%, #101b18 100%)',
+                backgroundImage: 'repeating-linear-gradient(110deg,transparent,transparent 27px,rgba(255,255,255,0.045) 28px,transparent 29px)',
               }}
             />
 
@@ -187,7 +184,7 @@ function ProfileContent() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={avatarSrc}
-                        alt="avatar"
+                        alt="Profile picture"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -200,7 +197,9 @@ function ProfileContent() {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl flex items-center justify-center
+                    aria-label="Change profile picture"
+                    title="Change profile picture"
+                    className="absolute -bottom-2 -right-2 size-10 rounded-xl flex items-center justify-center
                                bg-primary text-[#0a0a0a] shadow-lg
                                transition-all duration-200 hover:scale-110 hover:shadow-[0_0_16px_rgba(0,191,166,0.5)]"
                   >
@@ -218,7 +217,7 @@ function ProfileContent() {
                 {/* Name + badge */}
                 <div className="flex-1 sm:pb-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-2xl font-black text-white leading-tight">
+                    <h1 className="text-3xl font-semibold tracking-tight text-white leading-tight">
                       {form.fullname || 'Your Name'}
                     </h1>
                     <span
@@ -227,7 +226,7 @@ function ProfileContent() {
                                      text-primary text-xs font-semibold"
                     >
                       <ShieldCheck size={11} />
-                      Verified Member
+                      Community member
                     </span>
                   </div>
                   <p className="text-white/40 text-sm mt-1">

@@ -53,7 +53,7 @@ export default function Header() {
   };
 
   const navLinkClass = (href: string) =>
-    `nav-link pressable px-3 py-1.5 text-[0.95rem] transition-colors duration-200 hover:text-primary
+    `nav-link pressable min-h-10 inline-flex items-center rounded-lg px-3 py-2 text-[0.9rem] transition-colors duration-200 hover:text-primary
      ${pathname === href ? 'active text-primary font-semibold' : 'text-white/80'}`;
 
   const sidebarLinkClass = (href: string) =>
@@ -84,8 +84,8 @@ export default function Header() {
   return (
     <>
       {/* ── Top bar: glass + hairline border ── */}
-      <header className="glass sticky top-0 z-50 border-b border-white/[0.06]">
-        <div className="max-container flex h-16 items-center justify-between">
+      <header className="glass sticky top-0 z-50 border-b border-white/10">
+        <div className="max-container flex h-16 items-center justify-between gap-6">
           {/* Logo */}
           <Link
             href="/"
@@ -104,7 +104,7 @@ export default function Header() {
           {/* Desktop Nav */}
           <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map(({ href, label }) => (
-              <Link key={href} href={href} className={navLinkClass(href)}>
+              <Link key={href} href={href} className={href === '/video' ? 'ml-2 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-bold text-background transition-colors hover:bg-primary-hover' : navLinkClass(href)}>
                 {label}
               </Link>
             ))}
@@ -113,7 +113,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="pressable ml-1 rounded-full border border-white/10 px-4 py-1.5 text-[0.9rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
+                className="pressable ml-1 min-h-10 rounded-lg border border-white/10 px-4 py-2 text-[0.9rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
               >
                 Logout
               </button>
