@@ -111,7 +111,6 @@ export default function HomePage() {
                          transition-all duration-300
                          hover:shadow-[0_0_30px_rgba(0,191,166,0.45)]
                          hover:bg-[#00d4b8] hover:-translate-y-0.5"
-            >
             />
             <a
               href="#features"
