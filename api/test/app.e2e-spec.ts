@@ -101,7 +101,10 @@ describe("Debate API (e2e)", () => {
         auth: { ticket: issued.body.ticket },
       });
       sockets.push(ticketSocket);
-      await once(ticketSocket, "connect");
+      await new Promise<void>((resolve, reject) => {
+        ticketSocket.once("connect", () => resolve());
+        ticketSocket.once("connect_error", reject);
+      });
 
       await http.post("/api/v1/auth/logout")
         .set("Origin", "http://localhost:3000")
@@ -115,7 +118,9 @@ describe("Debate API (e2e)", () => {
         auth: { ticket: issued.body.ticket },
       });
       sockets.push(rejected);
-      const error = await once<Error>(rejected, "connect_error");
+      const error = await new Promise<Error>((resolve) => {
+        rejected.once("connect_error", resolve);
+      });
       expect(error.message).toBe("Not authenticated");
     });
 
