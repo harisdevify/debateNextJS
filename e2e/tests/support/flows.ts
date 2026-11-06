@@ -45,7 +45,7 @@ export async function openDeviceCheck(page: Page, options: { topic?: string; lan
   await expect(page.getByRole('heading', { name: 'Find the right conversation' })).toBeVisible();
   if (options.topic) await page.getByRole('radio', { name: options.topic }).check();
   if (options.language) await page.getByRole('radio', { name: options.language }).check();
-  if (options.formal) await page.getByRole('radio', { name: /Formal debate/i }).check();
+  if (options.formal) await page.getByRole('radio', { name: /Structured debate/i }).check();
   await page.getByRole('button', { name: 'Find a debate partner' }).click();
   await expect(page.getByRole('heading', { name: 'Ready for your conversation?' })).toBeVisible();
 }

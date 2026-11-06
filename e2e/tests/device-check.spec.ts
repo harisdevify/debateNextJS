@@ -4,11 +4,11 @@ import { login, openDeviceCheck, registerAccount } from './support/flows';
 test('preferences survive the device-check step and going back', async ({ page, request }) => {
   await login(page, await registerAccount(request));
   await openDeviceCheck(page, { topic: 'Technology & AI', language: 'Urdu', formal: true });
-  await expect(page.getByText(/Technology & AI.*Urdu.*Formal/i)).toBeVisible();
+  await expect(page.getByText(/Technology & AI.*Urdu.*Structured debate/i)).toBeVisible();
   await page.getByRole('button', { name: 'Back to preferences' }).click();
   await expect(page.getByRole('radio', { name: 'Technology & AI' })).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Urdu' })).toBeChecked();
-  await expect(page.getByRole('radio', { name: /Formal debate/i })).toBeChecked();
+  await expect(page.getByRole('radio', { name: /Structured debate/i })).toBeChecked();
 });
 
 test('fake camera preview is live and device tracks stop when returning', async ({ page, request }) => {

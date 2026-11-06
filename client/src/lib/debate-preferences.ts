@@ -21,5 +21,5 @@ export const DEBATE_LANGUAGES = [
 
 export const DEBATE_MODES = [
   { value: 'friendly', label: 'Friendly conversation', description: 'Open, respectful discussion.' },
-  { value: 'formal', label: 'Structured debate', description: 'Choose a formal discussion style; timed turns are not available yet.' },
+  { value: 'formal', label: 'Structured debate', description: 'Server-timed speaking turns with equal time for both participants.' },
 ] as const;
