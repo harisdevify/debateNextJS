@@ -63,3 +63,66 @@ jobs:
       - run: npm run test
       - run: npm run build
 
+
+  browser-e2e:
+    name: Browser E2E (Chromium)
+    # Playwright 1.56 Chromium binaries support Ubuntu 24.04, not 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/debate?schema=public
+      JWT_SECRET: ci-only-secret-that-is-long-enough-for-tests
+      CLIENT_URL: http://localhost:3000
+      PORT: '8800'
+      API_PROXY_TARGET: http://localhost:8800/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8800/api/v1
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:8800
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: debate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d debate"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            client/package-lock.json
+      - name: Install application dependencies
+        run: |
+          npm ci --prefix api
+          npm ci --prefix client
+      - name: Install pinned Playwright browser runner
+        run: npm install --prefix e2e --no-audit --no-fund
+      - name: Install Chromium and Linux dependencies
+        run: npm --prefix e2e exec -- playwright install --with-deps chromium
+      - name: Prepare disposable PostgreSQL schema
+        working-directory: api
+        run: npx prisma migrate deploy
+      - name: Build stable NestJS server for browser tests
+        run: npm --prefix api run build
+      - name: Run real browser journeys with fake media
+        run: npm --prefix e2e test
+      - name: Upload Playwright failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-diagnostics
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          retention-days: 7

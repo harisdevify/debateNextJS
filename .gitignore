@@ -27,3 +27,9 @@ next-env.d.ts
 # Editor folders
 .vscode/
 .idea/
+
+# Browser E2E runner and diagnostics
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/package-lock.json
