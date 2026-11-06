@@ -19,11 +19,16 @@ export function MicrophoneActivity({ stream, enabled }: { stream: MediaStream; e
       analyser.fftSize = 512;
       source.connect(analyser); // Never connect to destination; avoid audio feedback.
       const samples = new Uint8Array(analyser.frequencyBinCount);
-      const tick = () => {
+      let lastSample = 0;
+      const tick = (time: number) => {
         if (!active) return;
-        analyser.getByteFrequencyData(samples);
-        const energy = samples.reduce((total, sample) => total + sample, 0) / samples.length;
-        setLevel(Math.min(100, Math.round(energy / 1.2)));
+        // Sampling at ~10 Hz avoids a full React render every animation frame.
+        if (time - lastSample >= 100) {
+          lastSample = time;
+          analyser.getByteFrequencyData(samples);
+          const energy = samples.reduce((total, sample) => total + sample, 0) / samples.length;
+          setLevel(Math.min(100, Math.round(energy / 1.2)));
+        }
         frame = requestAnimationFrame(tick);
       };
       frame = requestAnimationFrame(tick);
