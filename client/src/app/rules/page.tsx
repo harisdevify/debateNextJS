@@ -52,7 +52,7 @@ const rules = [
 export default function RulesPage() {
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 px-5 py-20">
+      <section className="relative flex-1 px-4 py-12 sm:px-5 sm:py-20">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -74,7 +74,7 @@ export default function RulesPage() {
 
         <div className="relative z-10 max-w-[720px] mx-auto">
           {/* Header */}
-          <div className="text-center mb-14">
+          <div className="text-center mb-8 sm:mb-12">
             <div
               className="inline-flex items-center gap-2 px-4 py-1.5 mb-5 rounded-full
                             border border-[rgba(0,191,166,0.3)] bg-[rgba(0,191,166,0.08)]
@@ -98,7 +98,7 @@ export default function RulesPage() {
             {rules.map(({ icon: Icon, title, text }, index) => (
               <li
                 key={title}
-                className="group flex items-start gap-4 px-5 py-4 rounded-2xl
+                className="group flex items-start gap-3 px-4 py-4 sm:gap-4 sm:px-5 rounded-2xl
                            bg-[rgba(10,24,22,0.7)] border border-white/[0.07]
                            transition-all duration-300
                            hover:border-[rgba(0,191,166,0.35)]

@@ -56,7 +56,7 @@ export default function LoginPage() {
   if (authLoading || user) return <div role="status" className="flex min-h-[50vh] items-center justify-center text-sm text-white/60">Checking your session…</div>;
    return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 flex items-center justify-center px-4 py-16">
+      <section className="relative flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
         {/* Background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -138,7 +138,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── RIGHT PANEL — FORM ── */}
-          <div className="rounded-3xl border border-white/[0.08] bg-[rgba(10,24,22,0.85)] p-8 backdrop-blur-sm fade-up d-2">
+          <div className="rounded-2xl border border-white/[0.1] bg-[rgba(10,24,22,0.85)] p-5 shadow-xl sm:p-8 backdrop-blur-sm fade-up d-2">
             <div className="mb-7">
               <h3 className="text-white font-black text-[1.5rem]">Login</h3>
               <p className="text-white/35 text-sm mt-1">

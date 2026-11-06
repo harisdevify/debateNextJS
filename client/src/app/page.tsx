@@ -40,7 +40,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden max-container">
       {/* ── HERO ── */}
-      <section className="relative flex items-center justify-center text-center px-5 min-h-[calc(100vh-56px)]">
+      <section className="relative flex items-center justify-center text-center px-4 sm:px-5 min-h-[calc(100svh-64px)]">
         {/* Background layers */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* dot grid */}
@@ -78,7 +78,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="relative z-10 max-w-[860px] mx-auto flex flex-col items-center gap-6 py-24 stagger">
+        <div className="relative z-10 max-w-[860px] mx-auto flex flex-col items-center gap-5 py-16 sm:gap-6 sm:py-24 stagger">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,191,166,0.3)] bg-[rgba(0,191,166,0.08)] text-primary text-sm font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -124,7 +124,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats Row */}
-          <div className="flex flex-wrap justify-center gap-8 mt-10 pt-10 border-t border-white/[0.07] w-full stagger">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-5 mt-8 pt-8 sm:mt-10 sm:pt-10 border-t border-white/[0.07] w-full stagger">
             {stats.map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5 text-primary">
@@ -141,7 +141,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" className="relative px-6 py-28">
+      <section id="features" className="relative px-4 py-16 sm:px-6 sm:py-24">
         {/* subtle bg */}
         <div
           className="absolute inset-0 pointer-events-none"

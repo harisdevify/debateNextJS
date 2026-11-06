@@ -17,7 +17,7 @@ import {
   type UserDetail,
 } from './types';
 const button =
-  'min-h-11 rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40';
+  'min-h-11 rounded-xl border border-border px-4 py-2 text-sm font-semibold transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40';
 const date = (value: string) => new Date(value).toLocaleString();
 function History({ actions }: { actions: AuditAction[] }) {
   return (
@@ -184,7 +184,7 @@ export function AdminPanel() {
           Review reports, manage account access and see every moderation action.
         </p>
       </header>
-      <nav aria-label="Admin sections" className="my-6 flex gap-3">
+      <nav aria-label="Admin sections" className="my-6 flex flex-wrap gap-3">
         <button
           className={button}
           aria-pressed={tab === 'reports'}
@@ -354,7 +354,7 @@ export function AdminPanel() {
                     setPage(1);
                     setFilter(e.target.value);
                   }}
-                  className="ml-3 min-h-11 rounded-xl border border-border bg-surface px-3"
+                  className="ml-0 mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 sm:ml-3 sm:mt-0 sm:inline-block sm:w-auto"
                 >
                   <option value="OPEN">Needs review</option>
                   <option value="REVIEWED">Reviewed</option>
@@ -363,16 +363,16 @@ export function AdminPanel() {
             ) : (
               <form
                 onSubmit={submitSearch}
-                className="flex w-full max-w-lg gap-2"
+                className="flex w-full max-w-lg flex-wrap gap-2 sm:flex-nowrap"
               >
-                <label className="flex-1">
+                <label className="min-w-[12rem] flex-1">
                   <span className="sr-only">Search name or email</span>
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     maxLength={150}
                     placeholder="Search name or email"
-                    className="min-h-11 w-full rounded-xl border border-border bg-surface px-3"
+                    className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 focus-visible:ring-2 focus-visible:ring-primary/30"
                   />
                 </label>
                 <button className={button}>Search</button>
@@ -393,13 +393,13 @@ export function AdminPanel() {
                 : 'No users found.'}
             </p>
           )}
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid min-w-0 gap-3 md:grid-cols-2">
             {!loading &&
               list?.items.map((item) =>
                 'reportedUser' in item ? (
                   <article
                     key={item.id}
-                    className="rounded-2xl border border-border bg-surface p-5"
+                    className="min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5"
                   >
                     <p className="text-xs text-muted">
                       Report #{item.id} - {date(item.createdAt)}

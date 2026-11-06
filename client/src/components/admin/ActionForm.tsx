@@ -8,7 +8,7 @@ export interface ActionBody {
   durationHours?: number;
 }
 const field =
-  'w-full rounded-xl border border-border bg-background p-3 text-foreground focus-visible:outline-2 focus-visible:outline-primary';
+  'min-h-12 w-full rounded-xl border border-border bg-background p-3 text-foreground focus-visible:outline-2 focus-visible:outline-primary';
 export function ActionForm({
   name,
   report,
@@ -59,7 +59,7 @@ export function ActionForm({
     }
   };
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5">
       <h2 className="text-lg font-bold">Choose an action</h2>
       <p className="mt-2 text-sm text-muted">
         Review the context first. A report alone is not proof of misconduct.

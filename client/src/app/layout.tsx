@@ -30,13 +30,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased scrollbar-thin flex min-h-screen flex-col`}
       >
         <AuthProvider>
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-background">Skip to main content</a>
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="min-w-0 flex-1">{children}</main>
           <Footer developer="M Haris" />
         </AuthProvider>
         <Toaster
           richColors
-          position="top-right"
+          position="top-center"
           toastOptions={{
             style: {
               background: 'rgba(13, 22, 20, 0.92)',
