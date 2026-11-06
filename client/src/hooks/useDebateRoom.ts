@@ -2,6 +2,7 @@
 import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
 import { mediaEnvironmentError, mediaErrorMessage } from "@/lib/media-errors";
+import { analyzeInboundStats, type ConnectionQuality, type PacketSample } from "@/lib/connection-quality";
 import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences, FormalDebateState } from "@/types";
 import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
@@ -57,6 +58,20 @@ export function useDebateRoom(
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('checking');
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<{ audio: string; video: string }>({ audio: '', video: '' });
+  const [switchingDevice, setSwitchingDevice] = useState(false);
+  const mediaSwitchRef = useRef(false);
+  const refreshDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      if (streamRef.current) setAvailableDevices(list);
+    } catch {
+      // Device enumeration is optional on browsers with limited permissions.
+    }
+  }, []);
   const closePeer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
@@ -72,8 +87,38 @@ export function useDebateRoom(
       pc.close();
     }
     iceRef.current = [];
+    setConnectionQuality('checking');
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, [remoteVideoRef]);
+  useEffect(() => {
+    if (!navigator.mediaDevices?.addEventListener) return;
+    const update = () => { void refreshDevices(); };
+    navigator.mediaDevices.addEventListener('devicechange', update);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', update);
+  }, [refreshDevices]);
+
+  useEffect(() => {
+    if (status !== 'connected') return;
+    const pc = peerRef.current;
+    if (!pc?.getStats) return;
+    let cancelled = false;
+    let previous = new Map<string, PacketSample>();
+    const sample = async () => {
+      try {
+        const report = await pc.getStats();
+        if (cancelled || peerRef.current !== pc) return;
+        const result = analyzeInboundStats(report, previous);
+        previous = result.next;
+        setConnectionQuality(result.quality);
+      } catch {
+        if (!cancelled) setConnectionQuality('checking');
+      }
+    };
+    void sample();
+    const timer = setInterval(() => { void sample(); }, 4_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [status]);
+
   useEffect(() => {
     const effectVersion = ++effectVersionRef.current;
     const socket = createSocket();
@@ -449,6 +494,11 @@ export function useDebateRoom(
         if (audio) audio.enabled = enabled;
         setMicOn(enabled);
         setCamOn(true);
+        setSelectedDeviceIds({
+          audio: audio?.getSettings?.().deviceId ?? '',
+          video: stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? '',
+        });
+        void refreshDevices();
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         start();
       } catch {
@@ -478,7 +528,7 @@ export function useDebateRoom(
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [closePeer, localVideoRef, remoteVideoRef, preferences, initialStream]);
+  }, [closePeer, localVideoRef, remoteVideoRef, preferences, initialStream, refreshDevices]);
   const cancelSearch = useCallback(() => {
     pausedRef.current = true;
     awaitingReconnectRef.current = false;
@@ -612,6 +662,59 @@ export function useDebateRoom(
     },
     [status, emitWithAck],
   );
+  const switchDevice = useCallback(async (kind: 'audio' | 'video', deviceId: string): Promise<boolean> => {
+    const current = streamRef.current;
+    if (!current || !navigator.mediaDevices?.getUserMedia || mediaSwitchRef.current) return false;
+    const oldTrack = kind === 'audio' ? current.getAudioTracks()[0] : current.getVideoTracks()[0];
+    if (!oldTrack || !deviceId || oldTrack.getSettings?.().deviceId === deviceId) return false;
+    mediaSwitchRef.current = true;
+    setSwitchingDevice(true);
+    let acquired: MediaStream | null = null;
+    try {
+      acquired = await navigator.mediaDevices.getUserMedia(kind === 'audio'
+        ? { audio: { deviceId: { exact: deviceId } }, video: false }
+        : { video: { deviceId: { exact: deviceId } }, audio: false });
+      const replacement = kind === 'audio' ? acquired.getAudioTracks()[0] : acquired.getVideoTracks()[0];
+      if (!replacement) throw new Error('Selected device did not provide a media track.');
+      if (streamRef.current !== current || oldTrack.readyState === 'ended') {
+        acquired.getTracks().forEach(track => track.stop());
+        return false;
+      }
+      const pc = peerRef.current;
+      const sender = pc?.getSenders?.().find(item => item.track === oldTrack);
+      // Preserve formal-debate turn enforcement, user mute and camera state.
+      replacement.enabled = kind === 'audio'
+        ? maySpeakRef.current && micWantedRef.current
+        : oldTrack.enabled;
+      if (sender) await sender.replaceTrack(replacement);
+      if (streamRef.current !== current) {
+        if (sender) await sender.replaceTrack(oldTrack).catch(() => undefined);
+        acquired.getTracks().forEach(track => track.stop());
+        return false;
+      }
+      replacement.onended = oldTrack.onended;
+      current.removeTrack(oldTrack);
+      current.addTrack(replacement);
+      oldTrack.onended = null;
+      oldTrack.stop();
+      setSelectedDeviceIds(ids => ({ ...ids, [kind]: replacement.getSettings?.().deviceId || deviceId }));
+      if (kind === 'audio') setMicOn(replacement.enabled);
+      else {
+        setCamOn(replacement.enabled);
+        if (localVideoRef.current) localVideoRef.current.srcObject = current;
+      }
+      void refreshDevices();
+      return true;
+    } catch (error) {
+      acquired?.getTracks().forEach(track => track.stop());
+      toast.error(mediaErrorMessage(error));
+      return false;
+    } finally {
+      mediaSwitchRef.current = false;
+      setSwitchingDevice(false);
+    }
+  }, [localVideoRef, refreshDevices]);
+
   const toggleMic = () => {
     if (!maySpeakRef.current) return;
     const track = streamRef.current?.getAudioTracks()[0];
@@ -644,6 +747,12 @@ export function useDebateRoom(
     toggleCamera,
     micOn,
     camOn,
+    connectionQuality,
+    availableDevices,
+    selectedDeviceIds,
+    switchingDevice,
+    switchDevice,
+    refreshDevices,
     formalState,
     maySpeak: preferences.mode !== 'formal' || (formalState?.isSpeaker === true && !formalState.completed),
     debateRemainingMs: formalState ? Math.max(0, formalState.endsAt - (countdownNow + clockOffset)) : null,

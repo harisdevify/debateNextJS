@@ -4,6 +4,7 @@ import { PageState } from '@/components/ui/PageState';
 import { DebateSetup } from '@/components/debate/DebateSetup';
 import { PreDebateCheck } from '@/components/debate/PreDebateCheck';
 import { MatchSearchStatus } from '@/components/debate/MatchSearchStatus';
+import { MicrophoneActivity } from '@/components/debate/MicrophoneActivity';
 import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
 import type { DebatePreferences } from '@/types';
 import { BlockDialog } from '@/components/debate/BlockDialog';
@@ -97,6 +98,12 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     toggleCamera,
     micOn,
     camOn,
+    connectionQuality,
+    availableDevices,
+    selectedDeviceIds,
+    switchingDevice,
+    switchDevice,
+    refreshDevices,
     formalState,
     maySpeak,
     debateRemainingMs,
@@ -159,6 +166,30 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/12 bg-[#111b19] px-4 py-3 text-xs text-white/70">
               <span className="min-w-0 flex-1 truncate font-semibold tracking-wide text-white/75">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
               <button type="button" onClick={onChangePreferences} className="min-h-10 shrink-0 rounded-lg px-2 font-semibold text-primary hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40">Change preferences</button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111b19] px-4 py-2.5" aria-label="Live media diagnostics">
+              <div className="flex items-center gap-4">
+                <span role="status" className={`text-xs font-semibold ${status !== 'connected' ? 'text-white/60' : connectionQuality === 'good' ? 'text-primary' : connectionQuality === 'poor' ? 'text-red-300' : connectionQuality === 'unstable' ? 'text-amber-300' : 'text-white/60'}`}>
+                  {status !== 'connected' ? 'Media: waiting for connection' : connectionQuality === 'checking' ? 'Connection: measuring…' : `Connection: ${connectionQuality}`}
+                </span>
+                <MicrophoneActivity stream={initialStream} enabled={micOn && status === 'connected'} />
+              </div>
+              <details className="group relative min-w-[150px] text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>
+                <summary className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-white/20 px-3 font-medium hover:bg-white/5">Audio & video devices</summary>
+                <div className="absolute right-0 top-full z-30 mt-2 w-[min(320px,calc(100vw-2rem))] space-y-3 rounded-xl border border-white/20 bg-[#111e1a] p-4 shadow-xl">
+                  <label htmlFor="live-camera" className="block text-xs font-semibold text-white/70">Camera</label>
+                  <select id="live-camera" aria-label="Camera device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.video} onChange={(event) => { void switchDevice('video', event.target.value); }} className="min-h-11 w-full rounded-lg border border-white/20 bg-[#0b1512] px-3 text-sm text-white">
+                    {!availableDevices.some(device => device.kind === 'videoinput' && device.deviceId === selectedDeviceIds.video) && <option value={selectedDeviceIds.video}>Current camera</option>}
+                    {availableDevices.filter(device => device.kind === 'videoinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${i + 1}`}</option>)}
+                  </select>
+                  <label htmlFor="live-mic" className="block text-xs font-semibold text-white/70">Microphone</label>
+                  <select id="live-mic" aria-label="Microphone device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.audio} onChange={(event) => { void switchDevice('audio', event.target.value); }} className="min-h-11 w-full rounded-lg border border-white/20 bg-[#0b1512] px-3 text-sm text-white">
+                    {!availableDevices.some(device => device.kind === 'audioinput' && device.deviceId === selectedDeviceIds.audio) && <option value={selectedDeviceIds.audio}>Current microphone</option>}
+                    {availableDevices.filter(device => device.kind === 'audioinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${i + 1}`}</option>)}
+                  </select>
+                  <p className="text-xs text-white/50">{switchingDevice ? 'Switching device…' : 'Switching will keep your current conversation active.'}</p>
+                </div>
+              </details>
             </div>
             {preferences.mode === 'formal' && formalState && status !== 'completed' && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3" role="status" aria-live="off">
