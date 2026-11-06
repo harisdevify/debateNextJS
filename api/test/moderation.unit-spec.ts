@@ -70,6 +70,7 @@ describe('moderation rules', () => {
       verifyAsync: jest.fn().mockResolvedValue({ id: 42 }),
     } as unknown as JwtService;
     const access = {
+      requireValidToken: jest.fn().mockResolvedValue(undefined),
       requireActive: jest.fn().mockRejectedValue(new Error('banned')),
     } as unknown as AccountAccessService;
     await expect(
@@ -77,6 +78,7 @@ describe('moderation rules', () => {
         context({ cookies: { accessToken: 'old-token' } })
       )
     ).rejects.toThrow('banned');
+    expect(access.requireValidToken).toHaveBeenCalledWith('old-token');
     expect(access.requireActive).toHaveBeenCalledWith(42);
   });
   function service(reportStatus = 'OPEN', targetRole = 'USER') {
