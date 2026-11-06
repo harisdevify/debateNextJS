@@ -36,7 +36,7 @@ export function useDebateRoom(
   const micWantedRef = useRef(true);
   const maySpeakRef = useRef(preferences.mode !== 'formal');
   const [formalState, setFormalState] = useState<FormalDebateState | null>(null);
-  const [countdownNow, setCountdownNow] = useState(Date.now());
+  const [countdownNow, setCountdownNow] = useState(0);
   const [clockOffset, setClockOffset] = useState(0);
   useEffect(() => {
     if (!formalState || formalState.completed) return;
