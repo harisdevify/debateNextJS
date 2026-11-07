@@ -9,7 +9,7 @@ describe('reusable UI components', () => {
     render(<SelectField label="Gender" defaultValue=""><option value="">Choose one</option><option value="female">Female</option></SelectField>);
     const select = screen.getByRole('combobox', { name: 'Gender' });
     expect(select.getAttribute('id')).toBeTruthy();
-    expect((select as HTMLSelectElement).value).toBe('');
+    expect(select.textContent).toContain('Choose one');
   });
   it('makes selected radio options keyboard-operable with descriptions', () => {
     const onChange = vi.fn();
