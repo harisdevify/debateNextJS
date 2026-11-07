@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Home, type LucideIcon } from 'lucide-react';
+import { Home, type LucideIcon } from 'lucide-react';
 
 export function StatusPage({ eyebrow, title, description, icon: Icon, action, href = '/' }: { eyebrow: string; title: string; description: string; icon: LucideIcon; action?: React.ReactNode; href?: string }) {
   return (
