@@ -66,17 +66,17 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
     }
   };
 
-  if (item.myFeedback) return (
-    <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
-      <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
-    </div>
-  );
-
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
-        <Star size={14} /> Rate debate
-      </button>
+      {item.myFeedback ? (
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
+          <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
+        </div>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+          <Star size={14} /> Rate debate
+        </button>
+      )}
       <Dialog open={open} onClose={() => { if (!submitting) { setOpen(false); setError(''); } }} title="Rate your debate partner" description="Your feedback helps make conversations more respectful." closeDisabled={submitting}>
         <form onSubmit={(event) => void submit(event)} className="space-y-4" aria-label="Rate this debate">
           <div>
@@ -137,7 +137,7 @@ export default function DebateHistoryPage() {
     return () => { current = false; };
   }, [user?.id, page, retry]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (checkingSession) return <PageState title="Checking your session…" />;
+  if (checkingSession) return <LoadingShell label="Checking your session…" skeleton variant="history" />;
   if (verificationError) return <PageState status="alert" title="Could not verify your session" description="Check your connection and try again." action={<button type="button" onClick={() => void retrySession()} className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-background">Retry</button>} />;
   if (!user) return <PageState title="Sign in to see your debate history" description="Only your own completed or ended sessions are available." action={<Link href="/login" className="min-h-11 rounded-lg bg-primary px-5 py-3 font-semibold text-background">Login</Link>} />;
 
@@ -162,7 +162,7 @@ export default function DebateHistoryPage() {
         <p>Only your ended sessions appear here. No recordings, chat messages or partner profiles are stored in debate history. “Completed” means the formal timer finished.</p>
       </div>
 
-      {fetching && <LoadingShell label="Loading debate activity…" skeleton />}
+      {fetching && <LoadingShell label="Loading debate activity…" skeleton variant="history-list" />}
       {!fetching && error && <PageState status="alert" title="Could not load your history" description="Your debates have not been changed. Try again when your connection is available." action={<button type="button" onClick={() => setRetry((n) => n + 1)} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-background">Try again</button>} />}
       {!fetching && !error && data?.items.length === 0 && <PageState title="No past debates yet" description="After your first conversation ends, its topic, mode and duration will appear here." action={<Link href="/video" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-background">Find a debate partner</Link>} />}
 

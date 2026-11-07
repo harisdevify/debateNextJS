@@ -122,16 +122,15 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
         <span className={selectedValue ? 'truncate' : 'truncate text-white/45'}>{selected?.label ?? 'Select an option'}</span>
         <ChevronDown size={15} aria-hidden="true" className={`shrink-0 text-white/45 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <div id={listboxId} role="listbox" aria-label={props['aria-label'] ?? 'Options'} className="absolute inset-x-0 top-[calc(100%+5px)] z-[100] max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#182320] p-1 shadow-2xl shadow-black/60">
+      <div id={listboxId} role="listbox" aria-label={props['aria-label'] ?? 'Options'} aria-hidden={!open} inert={!open}
+        className={`absolute inset-x-0 top-[calc(100%+5px)] z-[100] max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#182320] p-1 shadow-2xl shadow-black/60 transition-[opacity,transform,visibility] duration-150 ease-out motion-reduce:transition-none ${open ? 'visible translate-y-0 scale-100 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 scale-[0.985] opacity-0 pointer-events-none'}`}>
           {choices.map((choice, index) => (
             <button key={choice.value} id={`${listboxId}-opt-${index}`} type="button" role="option" aria-selected={choice.value === selectedValue} disabled={choice.disabled} onMouseEnter={() => setHighlighted(choice.value)} onClick={() => choose(choice.value)} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:bg-white/10 disabled:opacity-40 ${choice.value === (highlighted ?? selectedValue) ? 'bg-primary/10 text-primary' : 'text-white/80'}`}>
               <span className="truncate">{choice.label}</span>
               {choice.value === selectedValue && <Check size={15} aria-hidden="true" />}
             </button>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 });
