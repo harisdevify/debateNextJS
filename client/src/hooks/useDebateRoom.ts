@@ -729,7 +729,9 @@ export function useDebateRoom(
   );
   const stopScreenShare = useCallback(async () => {
     const display = displayRef.current;
-    if (!display) return;
+    if (!display || displayBusyRef.current) return;
+    displayBusyRef.current = true;
+    setScreenShareBusy(true);
     displayRef.current = null;
     // Stop capture immediately even if the connection disappeared.
     const track = display.getVideoTracks()[0];
