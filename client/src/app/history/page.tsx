@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { DEBATE_LANGUAGES, DEBATE_MODES, DEBATE_TOPICS } from '@/lib/debate-preferences';
 import { PageState } from '@/components/ui/PageState';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, ArrowRight, CalendarDays, Clock3, History, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Clock3, History, ShieldCheck, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -17,6 +17,7 @@ export interface HistoryItem {
   endedAt: string;
   durationSeconds: number;
   endReason: 'COMPLETED' | 'ENDED';
+  myFeedback: { rating: number; comment: string | null } | null;
 }
 
 interface HistoryResponse {
@@ -37,6 +38,55 @@ function duration(seconds: number): string {
   return `${minutes}m${seconds % 60 ? ` ${seconds % 60}s` : ''}`;
 }
 
+
+function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback: { rating: number; comment: string | null }) => void }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  if (item.myFeedback) return (
+    <div className="flex items-center gap-1 text-xs text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
+      <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
+    </div>
+  );
+
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="min-h-11 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary hover:bg-primary/10">Rate debate</button>;
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!rating || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const response = await api.post<{ rating: number; comment: string | null }>(`/debates/${item.id}/feedback`, { rating, comment: comment.trim() || undefined }, { silent: true });
+      onSaved({ rating: response.data.rating, comment: response.data.comment });
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      setError(status === 409 ? 'You already rated this debate. Refresh history to see it.' : 'Could not save your rating. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(event) => void submit(event)} className="w-full max-w-sm space-y-3 rounded-xl border border-white/15 bg-black/15 p-4" aria-label="Rate this debate">
+      <p className="text-sm font-semibold text-white">How was your debate partner?</p>
+      <div className="flex gap-1" role="group" aria-label="Rating from 1 to 5 stars">
+        {[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} star${value > 1 ? 's' : ''}`} aria-pressed={rating === value} className={`flex size-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-primary ${value <= rating ? 'text-primary' : 'text-white/35'} hover:text-primary`}><Star size={23} fill={value <= rating ? 'currentColor' : 'none'} aria-hidden="true" /></button>)}
+      </div>
+      <label htmlFor={`feedback-${item.id}`} className="block text-xs font-medium text-white/70">Optional private feedback</label>
+      <textarea id={`feedback-${item.id}`} value={comment} onChange={(event) => setComment(event.target.value)} maxLength={500} rows={3} placeholder="Share constructive feedback (optional)" className="w-full rounded-lg border border-white/20 bg-[#0b1512] p-3 text-sm text-white placeholder:text-white/35 focus-visible:outline-primary" />
+      {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" disabled={!rating || submitting} className="min-h-11 rounded-lg bg-primary px-4 text-xs font-bold text-background disabled:opacity-40">{submitting ? 'Submitting…' : 'Submit rating'}</button>
+        <button type="button" disabled={submitting} onClick={() => { setOpen(false); setError(''); }} className="min-h-11 rounded-lg border border-white/20 px-4 text-xs text-white/70">Cancel</button>
+      </div>
+    </form>
+  );
+}
+
 export default function DebateHistoryPage() {
   const { user, loading: checkingSession, verificationError, retrySession } = useAuth();
   const [page, setPage] = useState(1);
@@ -44,6 +94,9 @@ export default function DebateHistoryPage() {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const handleFeedbackSaved = (debateId: string, feedback: { rating: number; comment: string | null }) => {
+    setData((previous) => previous ? { ...previous, items: previous.items.map((item) => item.id === debateId ? { ...item, myFeedback: feedback } : item) } : previous);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -110,6 +163,7 @@ export default function DebateHistoryPage() {
                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/55 sm:justify-end">
                   <span className="inline-flex items-center gap-2"><CalendarDays size={15} aria-hidden="true" /><time dateTime={item.endedAt}>{new Date(item.endedAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></span>
                   <span className="inline-flex items-center gap-2"><Clock3 size={15} aria-hidden="true" />{duration(item.durationSeconds)}</span>
+                  <FeedbackForm item={item} onSaved={(feedback) => handleFeedbackSaved(item.id, feedback)} />
                 </div>
               </article>
             ))}
