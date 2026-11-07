@@ -5,7 +5,8 @@ import { DebateSetup } from '@/components/debate/DebateSetup';
 import { PreDebateCheck } from '@/components/debate/PreDebateCheck';
 import { MatchSearchStatus } from '@/components/debate/MatchSearchStatus';
 import { MicrophoneActivity } from '@/components/debate/MicrophoneActivity';
-import { LiveCaptions } from '@/components/debate/LiveCaptions';
+import { useLiveCaptions } from '@/components/debate/LiveCaptions';
+import { AppSelect } from '@/components/ui/AppSelect';
 import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
 import type { DebatePreferences } from '@/types';
 import { BlockDialog } from '@/components/debate/BlockDialog';
@@ -20,6 +21,8 @@ import {
   PhoneOff,
   MonitorUp,
   MonitorOff,
+  Captions,
+  CaptionsOff,
   UserX,
   Video,
   VideoOff,
@@ -126,7 +129,11 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     const seconds = Math.ceil(value / 1000);
     return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
   };
-  const [chatOpen, setChatOpen] = useState(false);
+  const captions = useLiveCaptions({
+    status, language: preferences.language, micOn, maySpeak, onCaption: sendCaption,
+  });
+  const partnerConnected = status === 'connected';
+    const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -150,6 +157,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
   }, []);
 
   const openChat = () => {
+    if (!partnerConnected) return;
     setChatOpen(true);
     setReadCount(msgs.length);
   };
@@ -158,6 +166,10 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     setReadCount(msgs.length);
   };
   const handleSend = (text: string) => sendMessage(text);
+  useEffect(() => {
+    if (status !== 'connected') setChatOpen(false);
+  }, [status]);
+
   const handleNext = () => {
     setReadCount(0);
     findNext();
@@ -166,7 +178,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
   return (
     <>
       {/* PAGE */}
-      <div className="relative flex flex-col min-h-[calc(100svh-108px)] bg-[#07090e] lg:h-[calc(100dvh-108px)] lg:overflow-hidden font-[DM_Sans,sans-serif]">
+      <div className="relative flex flex-col min-h-[calc(100svh-56px)] bg-[#07090e] lg:h-[calc(100dvh-56px)] lg:overflow-hidden font-[DM_Sans,sans-serif]">
         {/* BODY */}
         <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
           {/* ── STAGE ── */}
@@ -174,34 +186,44 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
             className={`flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-3 transition-all duration-300 sm:p-4 lg:gap-3.5
               ${chatOpen ? 'blur-sm brightness-50 pointer-events-none' : ''}`}
           >
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/12 bg-[#111b19] px-4 py-3 text-xs text-white/70">
-              <span className="min-w-0 flex-1 truncate font-semibold tracking-wide text-white/75">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label} · {DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label} · {DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
-              <button type="button" onClick={onChangePreferences} className="min-h-10 shrink-0 rounded-lg px-2 font-semibold text-primary hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40">Change preferences</button>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111b19] px-4 py-2.5" aria-label="Live media diagnostics">
-              <div className="flex items-center gap-4">
-                <span role="status" className={`text-xs font-semibold ${status !== 'connected' ? 'text-white/60' : connectionQuality === 'good' ? 'text-primary' : connectionQuality === 'poor' ? 'text-red-300' : connectionQuality === 'unstable' ? 'text-amber-300' : 'text-white/60'}`}>
-                  {status !== 'connected' ? 'Media: waiting for connection' : connectionQuality === 'checking' ? 'Connection: measuring…' : `Connection: ${connectionQuality}`}
-                </span>
-                {status === 'connected' && <span className="text-xs text-white/55" role="status" aria-label="Video connection path">{connectionRoute === 'relay' ? 'Connection path: TURN relay' : connectionRoute === 'direct' ? 'Connection path: Direct peer' : 'Connection path: detecting…'}</span>}
-                <MicrophoneActivity stream={initialStream} enabled={micOn && status === 'connected'} />
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#111b19] px-3 py-2 text-xs sm:px-4" aria-label="Debate preferences and connection">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5 text-white/70">
+                <span className="max-w-full truncate font-semibold text-white/90">{DEBATE_TOPICS.find((t) => t.value === preferences.topic)?.label}</span>
+                <span className="text-white/25">/</span>
+                <span>{DEBATE_LANGUAGES.find((l) => l.value === preferences.language)?.label}</span>
+                <span className="text-white/25">/</span>
+                <span>{DEBATE_MODES.find((m) => m.value === preferences.mode)?.label}</span>
               </div>
-              <details className="group relative min-w-[150px] text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>
-                <summary className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-white/20 px-3 font-medium hover:bg-white/5">Audio & video devices</summary>
-                <div className="absolute right-0 top-full z-30 mt-2 w-[min(320px,calc(100vw-2rem))] space-y-3 rounded-xl border border-white/20 bg-[#111e1a] p-4 shadow-xl">
-                  <label htmlFor="live-camera" className="block text-xs font-semibold text-white/70">Camera</label>
-                  <select id="live-camera" aria-label="Camera device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.video} onChange={(event) => { void switchDevice('video', event.target.value); }} className="min-h-11 w-full rounded-lg border border-white/20 bg-[#0b1512] px-3 text-sm text-white">
-                    {!availableDevices.some(device => device.kind === 'videoinput' && device.deviceId === selectedDeviceIds.video) && <option value={selectedDeviceIds.video}>Current camera</option>}
-                    {availableDevices.filter(device => device.kind === 'videoinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${i + 1}`}</option>)}
-                  </select>
-                  <label htmlFor="live-mic" className="block text-xs font-semibold text-white/70">Microphone</label>
-                  <select id="live-mic" aria-label="Microphone device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.audio} onChange={(event) => { void switchDevice('audio', event.target.value); }} className="min-h-11 w-full rounded-lg border border-white/20 bg-[#0b1512] px-3 text-sm text-white">
-                    {!availableDevices.some(device => device.kind === 'audioinput' && device.deviceId === selectedDeviceIds.audio) && <option value={selectedDeviceIds.audio}>Current microphone</option>}
-                    {availableDevices.filter(device => device.kind === 'audioinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${i + 1}`}</option>)}
-                  </select>
-                  <p className="text-xs text-white/50">{switchingDevice ? 'Switching device…' : 'Switching will keep your current conversation active.'}</p>
-                </div>
-              </details>
+              <button type="button" onClick={onChangePreferences}
+                className="min-h-9 shrink-0 rounded-lg border border-white/10 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10">
+                Edit
+              </button>
+            </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#111b19] px-3 py-2 sm:px-4" aria-label="Live media diagnostics">
+              <span role="status" className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${partnerConnected ? 'border-primary/25 bg-primary/10 text-primary' : 'border-white/10 bg-white/5 text-white/60'}`}>
+                <span className={`size-1.5 shrink-0 rounded-full ${partnerConnected ? 'bg-primary' : 'bg-amber-300'}`} />
+                {partnerConnected ? connectionQuality === 'checking' ? 'Connected · Checking quality' : `Connected · ${connectionQuality}` : status === 'searching' ? 'Searching for partner' : status === 'reconnecting' ? 'Reconnecting' : 'Waiting for connection'}
+              </span>
+              {partnerConnected && <span className="hidden text-xs text-white/45 sm:inline" aria-label="Video connection path">{connectionRoute === 'relay' ? 'TURN relay' : connectionRoute === 'direct' ? 'Direct connection' : 'Checking route'}</span>}
+              <div className="ml-auto flex items-center gap-2">
+                <MicrophoneActivity stream={initialStream} enabled={micOn && partnerConnected} />
+                <details className="group relative text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>
+                  <summary className="flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-white/15 px-2.5 text-xs font-medium hover:bg-white/5">Devices</summary>
+                  <div className="absolute right-0 top-full z-30 mt-2 w-[min(300px,calc(100vw-2rem))] space-y-3 rounded-xl border border-white/20 bg-[#111e1a] p-4 shadow-xl">
+                    <label htmlFor="live-camera" className="block text-xs font-semibold text-white/70">Camera</label>
+                    <AppSelect id="live-camera" aria-label="Camera device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.video} onChange={(event) => { void switchDevice('video', event.target.value); }}>
+                      {!availableDevices.some(device => device.kind === 'videoinput' && device.deviceId === selectedDeviceIds.video) && <option value={selectedDeviceIds.video}>Current camera</option>}
+                      {availableDevices.filter(device => device.kind === 'videoinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${i + 1}`}</option>)}
+                    </AppSelect>
+                    <label htmlFor="live-mic" className="block text-xs font-semibold text-white/70">Microphone</label>
+                    <AppSelect id="live-mic" aria-label="Microphone device" disabled={switchingDevice || status === 'completed'} value={selectedDeviceIds.audio} onChange={(event) => { void switchDevice('audio', event.target.value); }}>
+                      {!availableDevices.some(device => device.kind === 'audioinput' && device.deviceId === selectedDeviceIds.audio) && <option value={selectedDeviceIds.audio}>Current microphone</option>}
+                      {availableDevices.filter(device => device.kind === 'audioinput').map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${i + 1}`}</option>)}
+                    </AppSelect>
+                    <p className="text-xs text-white/50">{switchingDevice ? 'Switching device…' : 'Device changes keep the debate active.'}</p>
+                  </div>
+                </details>
+              </div>
             </div>
             {preferences.mode === 'formal' && formalState && status !== 'completed' && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3" role="status" aria-live="off">
@@ -215,21 +237,13 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 <button onClick={onChangePreferences} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-background hover:bg-primary-hover">Start another debate</button>
               </div>
             )}
-            <LiveCaptions
-              status={status}
-              language={preferences.language}
-              micOn={micOn}
-              maySpeak={maySpeak}
-              peerCaption={peerCaption}
-              onCaption={sendCaption}
-            />
             {/* VIDEO GRID */}
             <div
-              className="grid min-h-[min(58svh,460px)] min-w-0 flex-1 grid-cols-1 grid-rows-2 gap-3 sm:min-h-[420px] sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]"
+              className="relative grid min-h-[min(54svh,520px)] min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(280px,1fr)_auto] gap-2 sm:min-h-[420px] sm:grid-cols-[minmax(0,1.65fr)_minmax(190px,0.75fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(200px,0.75fr)]"
             >
               {/* Remote tile */}
               <div
-                className="relative min-h-0 overflow-hidden rounded-[22px] bg-[#101b18]
+                className="relative min-h-[280px] overflow-hidden rounded-2xl bg-[#101b18]
                               border border-white/15 shadow-[0_18px_48px_rgba(0,0,0,0.4)]"
               >
                 <video
@@ -240,13 +254,24 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   style={{ background: PLACEHOLDER }}
                 />
                 {status === 'connected' && peerScreenSharing && (
-                  <span className="absolute bottom-3 left-3 rounded-lg border border-primary/30 bg-[#07130f]/90 px-3 py-1.5 text-xs font-semibold text-primary" role="status">
+                  <span className="absolute bottom-14 left-3 rounded-lg border border-primary/30 bg-[#07130f]/90 px-3 py-1.5 text-xs font-semibold text-primary" role="status">
                     Partner is sharing their screen
                   </span>
                 )}
                 {/* gloss overlay */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" />
 
+                {partnerConnected && captions.enabled && (
+                  <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex justify-center" aria-live="polite" aria-atomic="true">
+                    {peerCaption ? (
+                      <p className="max-w-[95%] rounded-lg border border-white/15 bg-black/80 px-3 py-2 text-center text-sm leading-5 text-white shadow-lg backdrop-blur-sm" aria-label="Partner subtitle">
+                        {peerCaption}
+                      </p>
+                    ) : (
+                      <span className="rounded-md bg-black/60 px-3 py-1.5 text-xs text-white/55">Waiting for partner captions…</span>
+                    )}
+                  </div>
+                )}
                 {/* status until a partner is connected */}
                 {status !== 'connected' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80 px-6 text-center">
@@ -314,7 +339,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
 
               {/* Local tile — teal glow ring */}
               <div
-                className="relative min-h-0 overflow-hidden rounded-[22px] bg-[#101b18]
+                className="relative min-h-[160px] overflow-hidden rounded-2xl bg-[#101b18]
                               border border-white/7
                               shadow-[inset_0_0_0_1px_rgba(0,217,189,0.2),0_18px_48px_rgba(0,0,0,0.4)]"
               >
@@ -346,7 +371,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
               </div>
             )}
             {/* CONTROLS */}
-            <div className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#111b19] px-4 py-3 shadow-[0_12px_35px_rgba(0,0,0,.28)]">
+            <div className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#111b19] px-3 py-2.5 shadow-[0_12px_35px_rgba(0,0,0,.22)] sm:gap-3">
               {/* Mic */}
               <button
                 onClick={() => {
@@ -356,7 +381,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 title={!maySpeak ? 'Wait for your speaking turn' : micOn ? 'Mute' : 'Unmute'}
                  disabled={!maySpeak || status === 'completed'}
                  aria-label={!maySpeak ? 'Microphone disabled until your turn' : micOn ? 'Mute microphone' : 'Unmute microphone'}
-                className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
+                className={`relative w-11 h-11 rounded-full border cursor-pointer
                   flex items-center justify-center outline-none
                   backdrop-blur-[8px] transition-all duration-200
                   active:scale-[0.87]
@@ -382,7 +407,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 }}
                 title={camOn ? 'Camera off' : 'Camera on'}
                 aria-label={camOn ? 'Turn camera off' : 'Turn camera on'}
-                className={`relative w-[52px] h-[52px] rounded-full border cursor-pointer
+                className={`relative w-11 h-11 rounded-full border cursor-pointer
                   flex items-center justify-center outline-none
                   backdrop-blur-[8px] transition-all duration-200
                   active:scale-[0.87]
@@ -409,9 +434,17 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 aria-label={screenSharing ? 'Stop screen sharing' : 'Share screen'}
                 aria-pressed={screenSharing}
                 title={screenSharing ? 'Stop screen sharing' : 'Share your screen'}
-                className={`relative flex size-[52px] min-h-11 min-w-11 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40 ${screenSharing ? 'border-primary bg-primary/15 text-primary' : 'border-white/15 bg-white/7 text-white hover:bg-white/15'}`}
+                className={`relative flex size-11 min-h-11 min-w-11 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40 ${screenSharing ? 'border-primary bg-primary/15 text-primary' : 'border-white/15 bg-white/7 text-white hover:bg-white/15'}`}
               >
                 {screenSharing ? <MonitorOff size={19} aria-hidden="true" /> : <MonitorUp size={19} aria-hidden="true" />}
+              </button>
+
+              {/* Captions: own speech is transmitted but only partner text is displayed. */}
+              <button type="button" onClick={captions.toggle} disabled={!captions.supported}
+                aria-label={captions.enabled ? 'Turn captions off' : 'Turn captions on'} aria-pressed={captions.enabled}
+                title={!captions.supported ? 'Captions not supported in this browser' : captions.enabled ? 'Turn captions off' : 'Turn captions on'}
+                className={`relative flex size-11 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40 ${captions.enabled ? 'border-primary/45 bg-primary/15 text-primary' : 'border-white/15 bg-white/7 text-white/80 hover:bg-white/15'}`}>
+                {captions.enabled ? <Captions size={19} aria-hidden="true" /> : <CaptionsOff size={19} aria-hidden="true" />}
               </button>
 
               {/* End Call */}
@@ -419,7 +452,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 onClick={() => router.push('/')}
                 title="End Call"
                 aria-label="End debate"
-                className="relative w-[58px] h-[58px] rounded-full border-none cursor-pointer
+                className="relative w-12 h-12 rounded-full border-none cursor-pointer
                   flex items-center justify-center outline-none
                   bg-[#ff3b5c] shadow-[0_4px_22px_rgba(255,59,92,0.45)]
                   transition-all duration-200
@@ -430,14 +463,14 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 <PhoneOff size={21} color="#fff" className="rotate-[135deg]" />
               </button>
 
-              {/* Chat toggle — only visible on mobile (md:hidden) */}
-              <button
+              {/* Chat is available only after the partner connects. */}
+              {partnerConnected && <button
                 onClick={openChat}
                 title="Chat"
                 aria-label={unread > 0 ? `Open chat, ${unread} unread messages` : 'Open chat'}
                 aria-haspopup="dialog"
                 aria-expanded={chatOpen}
-                className="relative lg:hidden w-[52px] h-[52px] rounded-full border-none cursor-pointer
+                className="relative lg:hidden w-11 h-11 rounded-full border-none cursor-pointer
                   flex items-center justify-center outline-none
                   bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
                   shadow-[0_4px_22px_rgba(0,229,192,0.32)]
@@ -458,12 +491,14 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                     {unread}
                   </span>
                 )}
-              </button>
+              </button>}
             </div>
+            {captions.error && <p role="alert" className="text-center text-xs text-amber-300">{captions.error}</p>}
+            {captions.enabled && <p className="text-center text-[11px] text-white/40">Captions use your browser’s speech service. No transcripts are stored.</p>}
           </section>
 
           {/* ── DESKTOP CHAT ASIDE (hidden on mobile) ── */}
-          <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(30vw,345px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#101815] lg:flex">
+          {partnerConnected && <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(30vw,345px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#101815] lg:flex">
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4.5 py-3.5 border-b border-white/7 shrink-0">
               <div className="live-dot w-2 h-2 rounded-full bg-[#00e5c0] shadow-[0_0_9px_rgba(0,229,192,0.7)]" />
@@ -473,9 +508,10 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
             </div>
             <ChatBody msgs={msgs} />
             <ChatInputRow onSend={handleSend} />
-          </aside>
+          </aside>}
         </div>
 
+        {partnerConnected && <>
         {/* ── MOBILE BACKDROP ── */}
         <div
           onClick={closeChat}
@@ -526,6 +562,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
           <ChatBody msgs={msgs} />
           <ChatInputRow onSend={handleSend} />
         </div>
+        </>}
       </div>
       <ReportDialog
         open={reportOpen}
