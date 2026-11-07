@@ -25,7 +25,7 @@ it('requires review and confirmation before applying an action', async () => {
     <ActionForm name="Member" report restricted={false} onSubmit={submit} />
   );
   await user.click(screen.getByRole('combobox', { name: 'Action' }));
-  await user.click(screen.getByRole('option', { name: 'Suspend' }));
+  await user.click(screen.getByRole('option', { name: 'Suspend temporarily' }));
   await user.type(
     screen.getByLabelText('Internal reason'),
     'Reviewed repeated harassment'
@@ -90,7 +90,7 @@ it('requires exact name confirmation for ban', async () => {
   const submit = vi.fn().mockResolvedValue(true);
   render(<ActionForm name="Member One" report={false} restricted={false} onSubmit={submit} />);
   await user.click(screen.getByRole('combobox', { name: 'Action' }));
-  await user.click(screen.getByRole('option', { name: 'Ban' }));
+  await user.click(screen.getByRole('option', { name: 'Ban account' }));
   await user.type(screen.getByLabelText('Internal reason'), 'Repeated serious harassment');
   await user.click(screen.getByRole('button', { name: 'Review action' }));
   const confirm = screen.getByRole('button', { name: 'Confirm action' });
