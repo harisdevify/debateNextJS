@@ -5,6 +5,7 @@ import { Camera, CameraOff, CheckCircle2, Mic, RefreshCw, ShieldCheck } from 'lu
 import type { DebatePreferences } from '@/types';
 import { DEBATE_LANGUAGES, DEBATE_MODES, DEBATE_TOPICS } from '@/lib/debate-preferences';
 import { mediaEnvironmentError, mediaErrorMessage } from '@/lib/media-errors';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 type Phase = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -125,21 +126,21 @@ export function PreDebateCheck({ preferences, onBack, onJoin }: Props) {
           <div className="mt-5 space-y-4">
             <div>
               <label htmlFor="debate-camera" className="mb-2 flex items-center gap-2 text-sm font-medium text-white"><Camera size={16} /> Camera</label>
-              <select id="debate-camera" value={camera} disabled={phase === 'loading' || !cameraDevices.length}
+              <AppSelect id="debate-camera" value={camera} disabled={phase === 'loading' || !cameraDevices.length}
                 onChange={(event) => void acquire(event.target.value, microphone)}
-                className="min-h-11 w-full rounded-xl border border-white/20 bg-[#0b1512] px-3 text-sm text-white disabled:opacity-60">
+                >
                 {!cameraDevices.length && <option value={camera}>Enable preview to detect cameras</option>}
                 {cameraDevices.map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${i + 1}`}</option>)}
-              </select>
+              </AppSelect>
             </div>
             <div>
               <label htmlFor="debate-mic" className="mb-2 flex items-center gap-2 text-sm font-medium text-white"><Mic size={16} /> Microphone</label>
-              <select id="debate-mic" value={microphone} disabled={phase === 'loading' || !micDevices.length}
+              <AppSelect id="debate-mic" value={microphone} disabled={phase === 'loading' || !micDevices.length}
                 onChange={(event) => void acquire(camera, event.target.value)}
-                className="min-h-11 w-full rounded-xl border border-white/20 bg-[#0b1512] px-3 text-sm text-white disabled:opacity-60">
+                >
                 {!micDevices.length && <option value={microphone}>Enable preview to detect microphones</option>}
                 {micDevices.map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${i + 1}`}</option>)}
-              </select>
+              </AppSelect>
             </div>
           </div>
           <div role="status" className="mt-5 min-h-6 text-sm">
