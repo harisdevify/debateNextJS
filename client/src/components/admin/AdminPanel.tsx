@@ -226,7 +226,7 @@ export function AdminPanel() {
           </button>
         </div>
       )}
-      {loading && <LoadingShell label="Loading moderation data…" skeleton />}
+      {loading && <LoadingShell label="Loading moderation data…" skeleton variant="admin" />}
       {tab === 'audit' ? <ModerationAudit refresh={refresh} /> : detail && user ? (
         <>
           <button
