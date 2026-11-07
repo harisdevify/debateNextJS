@@ -30,6 +30,7 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
   forwardedRef,
 ) {
   const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
   const fallbackId = useId();
   const listboxId = `${props.id ?? fallbackId}-options`;
   const [uncontrolled, setUncontrolled] = useState<string | undefined>(defaultValue === undefined ? undefined : String(defaultValue));
@@ -40,7 +41,7 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
   const selectedValue = value === undefined ? uncontrolled ?? choices.find((c) => !c.disabled)?.value ?? '' : String(value);
   const selected = choices.find((c) => c.value === selectedValue);
 
-  const close = useCallback(() => { setOpen(false); }, []);
+  const close = useCallback(() => { setOpen(false); setHighlighted(null); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -66,8 +67,8 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
   const move = (direction: number) => {
     const enabled = choices.filter((choice) => !choice.disabled);
     if (!enabled.length) return;
-    const index = enabled.findIndex((choice) => choice.value === selectedValue);
-    choose(enabled[(index + direction + enabled.length) % enabled.length].value);
+    const index = enabled.findIndex((choice) => choice.value === (highlighted ?? selectedValue));
+    setHighlighted(enabled[(index + direction + enabled.length) % enabled.length].value);
   };
 
   return (
@@ -98,10 +99,23 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
         aria-expanded={open}
         aria-label={props['aria-label'] ?? 'Select an option'}
         aria-controls={open ? listboxId : undefined}
-        onClick={() => setOpen((current) => !current)}
+        aria-activedescendant={open ? `${listboxId}-opt-${choices.findIndex((choice) => choice.value === (highlighted ?? selectedValue))}` : undefined}
+        onClick={() => { setHighlighted(selectedValue); setOpen((current) => !current); }}
         onKeyDown={(event) => {
-          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); if (!open) setOpen(true); else move(event.key === 'ArrowDown' ? 1 : -1); }
-          if (event.key === 'Escape') close();
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!open) { setHighlighted(selectedValue); setOpen(true); }
+            else move(event.key === 'ArrowDown' ? 1 : -1);
+          }
+          if ((event.key === 'Enter' || event.key === ' ') && open) {
+            event.preventDefault();
+            choose(highlighted ?? selectedValue);
+          }
+          if (event.key === 'Escape' || event.key === 'Tab') close();
+          if (event.key.length === 1 && !/\s/.test(event.key) && event.key !== ' ') {
+            const match = choices.find((choice) => !choice.disabled && choice.label.toLowerCase().startsWith(event.key.toLowerCase()));
+            if (match) { setHighlighted(match.value); setOpen(true); }
+          }
         }}
         className={`flex min-h-9 w-full items-center justify-between gap-2 rounded-lg border border-white/15 bg-[#0f1817] px-3 py-1.5 text-left text-sm leading-5 text-white transition-colors hover:border-white/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
@@ -110,8 +124,8 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
       </button>
       {open && (
         <div id={listboxId} role="listbox" aria-label={props['aria-label'] ?? 'Options'} className="absolute inset-x-0 top-[calc(100%+5px)] z-[100] max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#182320] p-1 shadow-2xl shadow-black/60">
-          {choices.map((choice) => (
-            <button key={choice.value} type="button" role="option" aria-selected={choice.value === selectedValue} disabled={choice.disabled} onClick={() => choose(choice.value)} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:bg-white/10 disabled:opacity-40 ${choice.value === selectedValue ? 'bg-primary/10 text-primary' : 'text-white/80'}`}>
+          {choices.map((choice, index) => (
+            <button key={choice.value} id={`${listboxId}-opt-${index}`} type="button" role="option" aria-selected={choice.value === selectedValue} disabled={choice.disabled} onMouseEnter={() => setHighlighted(choice.value)} onClick={() => choose(choice.value)} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:bg-white/10 disabled:opacity-40 ${choice.value === (highlighted ?? selectedValue) ? 'bg-primary/10 text-primary' : 'text-white/80'}`}>
               <span className="truncate">{choice.label}</span>
               {choice.value === selectedValue && <Check size={15} aria-hidden="true" />}
             </button>
