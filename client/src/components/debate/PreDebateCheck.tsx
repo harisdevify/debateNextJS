@@ -103,7 +103,7 @@ export function PreDebateCheck({ preferences, onBack, onJoin }: Props) {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Step 2 of 2 · Device check</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Step 4 of 4 · Device check</p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Ready for your conversation?</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">Check your camera and microphone before searching. Your match will not start until you join.</p>
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
