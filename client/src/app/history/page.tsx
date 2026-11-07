@@ -137,7 +137,7 @@ export default function DebateHistoryPage() {
     return () => { current = false; };
   }, [user?.id, page, retry]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (checkingSession) return <PageState title="Checking your session…" />;
+  if (checkingSession) return <LoadingShell label="Checking your session…" skeleton variant="history" />;
   if (verificationError) return <PageState status="alert" title="Could not verify your session" description="Check your connection and try again." action={<button type="button" onClick={() => void retrySession()} className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-background">Retry</button>} />;
   if (!user) return <PageState title="Sign in to see your debate history" description="Only your own completed or ended sessions are available." action={<Link href="/login" className="min-h-11 rounded-lg bg-primary px-5 py-3 font-semibold text-background">Login</Link>} />;
 
