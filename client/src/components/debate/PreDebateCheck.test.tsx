@@ -25,7 +25,7 @@ it('asks permission only after clicking Enable and releases media when going bac
   const view = render(<PreDebateCheck preferences={preferences} onBack={back} onJoin={vi.fn()} />);
   expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: /enable camera/i }));
-  await waitFor(() => expect(screen.getByText('Camera and microphone ready')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Camera and microphone are ready')).toBeTruthy());
   expect(screen.getByRole('combobox', { name: 'Camera' })).toBeTruthy();
   view.unmount();
   expect(tracks[0].stop).toHaveBeenCalled();

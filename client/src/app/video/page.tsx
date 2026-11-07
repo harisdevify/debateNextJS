@@ -134,20 +134,21 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
   });
   const partnerConnected = status === 'connected';
   const [chatOpen, setChatOpen] = useState(false);
+  const mobileChatVisible = chatOpen && partnerConnected;
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [readCount, setReadCount] = useState(0);
-  const unread = chatOpen
+  const unread = mobileChatVisible
     ? 0
     : msgs.slice(readCount).filter((m) => m.sender === 'other').length;
 
   useEffect(() => {
-    if (!chatOpen) return;
+    if (!mobileChatVisible) return;
     const closeOnEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setChatOpen(false); };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [chatOpen]);
+  }, [mobileChatVisible]);
 
   useEffect(() => {
     const wide = window.matchMedia('(min-width: 1024px)');
@@ -166,10 +167,6 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     setReadCount(msgs.length);
   };
   const handleSend = (text: string) => sendMessage(text);
-  useEffect(() => {
-    if (status !== 'connected') setChatOpen(false);
-  }, [status]);
-
   const handleNext = () => {
     setReadCount(0);
     findNext();
@@ -184,7 +181,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
           {/* ── STAGE ── */}
           <section
             className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 p-3 transition-all duration-300 sm:p-4 lg:gap-3
-              ${chatOpen ? 'max-lg:blur-sm max-lg:brightness-50 max-lg:pointer-events-none' : ''}`}
+              ${mobileChatVisible ? 'max-lg:blur-sm max-lg:brightness-50 max-lg:pointer-events-none' : ''}`}
           >
             <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#111b19] px-3 py-2 text-xs sm:px-4" aria-label="Debate preferences and connection">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5 text-white/70">
@@ -469,7 +466,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 title="Chat"
                 aria-label={unread > 0 ? `Open chat, ${unread} unread messages` : 'Open chat'}
                 aria-haspopup="dialog"
-                aria-expanded={chatOpen}
+                aria-expanded={mobileChatVisible}
                 className="relative lg:hidden w-11 h-11 rounded-full border-none cursor-pointer
                   flex items-center justify-center outline-none
                   bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
@@ -517,23 +514,23 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
           onClick={closeChat}
           className={`lg:hidden fixed inset-0 z-[90] bg-[rgba(7,9,14,0.72)] backdrop-blur-[8px]
             transition-opacity duration-300
-            ${chatOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+            ${mobileChatVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         />
 
         {/* ── MOBILE DRAWER ── */}
         <div
           role="dialog"
           aria-label="Debate chat"
-          aria-modal={chatOpen}
-          inert={!chatOpen}
-          aria-hidden={!chatOpen}
+          aria-modal={mobileChatVisible}
+          inert={!mobileChatVisible}
+          aria-hidden={!mobileChatVisible}
           className={`lg:hidden fixed inset-x-0 bottom-0 z-[100] flex flex-col h-[min(78dvh,640px)]
             bg-[#0f1219] rounded-t-[26px]
             border border-b-0 border-white/9
             shadow-[0_-18px_60px_rgba(0,0,0,0.65)]
              overflow-hidden pb-[env(safe-area-inset-bottom)]
              transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]
-            ${chatOpen ? 'translate-y-0' : 'translate-y-full'}`}
+            ${mobileChatVisible ? 'translate-y-0' : 'translate-y-full'}`}
         >
           {/* Drag pill */}
           <div className="w-9 h-1 rounded-full bg-white/16 mx-auto mt-3 shrink-0" />
