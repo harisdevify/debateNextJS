@@ -160,10 +160,9 @@ export default function DebateHistoryPage() {
           </div>
 
           <div className="mt-3 overflow-hidden rounded-2xl border border-white/12 bg-[#111b19]">
-            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(160px,0.7fr)] gap-4 border-b border-white/10 bg-white/[0.025] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40 md:grid">
+            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] gap-4 border-b border-white/10 bg-white/[0.025] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40 md:grid">
               <span>Conversation</span>
               <span>Date & duration</span>
-              <span className="text-right">Your feedback</span>
             </div>
             <div className="divide-y divide-white/10">
               {data.items.map((item) => (
@@ -186,10 +185,12 @@ export default function DebateHistoryPage() {
                     <span className="inline-flex items-center gap-2"><Clock3 size={14} className="shrink-0 text-white/40" aria-hidden="true" />{duration(item.durationSeconds)}</span>
                   </div>
 
-                  <div className="min-w-0 border-t border-white/10 pt-3 md:border-0 md:pt-0 md:text-right">
-                    <span className="mb-2 flex items-center gap-1.5 text-[11px] text-white/40 md:justify-end"><MessageSquareText size={13} aria-hidden="true" /> Feedback</span>
-                    <div className="flex justify-start md:justify-end">
-                      <FeedbackForm item={item} onSaved={(feedback) => handleFeedbackSaved(item.id, feedback)} />
+                  <div className="min-w-0 border-t border-white/10 pt-3 md:col-span-2">
+                    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                      <span className="inline-flex items-center gap-1.5 text-xs text-white/45"><MessageSquareText size={14} aria-hidden="true" /> Your feedback</span>
+                      <div className="min-w-0 flex-1 sm:flex sm:justify-end">
+                        <FeedbackForm item={item} onSaved={(feedback) => handleFeedbackSaved(item.id, feedback)} />
+                      </div>
                     </div>
                   </div>
                 </article>
