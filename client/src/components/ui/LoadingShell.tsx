@@ -1,6 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 
-type Variant = 'generic' | 'history' | 'admin' | 'profile' | 'video';
+type Variant = 'generic' | 'history' | 'history-list' | 'admin' | 'admin-list' | 'profile' | 'video';
 
 const surface = 'rounded-xl border border-white/10 bg-[#111b19]';
 const bar = 'ux-skeleton rounded-md bg-white/[0.09]';
@@ -13,16 +13,18 @@ function HeaderSkeleton({ title = 'w-44' }: { title?: string }) {
   return <div className="mb-5 space-y-3"><Bar width="w-24" height="h-2" /><Bar width={title} height="h-7" /><Bar width="w-72" /></div>;
 }
 
-function HistorySkeleton() {
-  return <><HeaderSkeleton title="w-52" />
-    <div className={`${surface} divide-y divide-white/10 overflow-hidden`}>
+function HistoryRows() {
+  return <div className={`${surface} divide-y divide-white/10 overflow-hidden`}>
       {[0, 1, 2, 3, 4].map((i) => <div key={i} className="grid items-center gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(160px,.7fr)_110px] sm:px-5">
         <div className="space-y-2"><Bar width="w-40" height="h-4" /><Bar width="w-28" /></div>
         <div className="hidden space-y-2 sm:block"><Bar width="w-36" /><Bar width="w-14" /></div>
         <Bar width="w-24" height="h-8" />
       </div>)}
-    </div>
-  </>;
+    </div>;
+}
+
+function HistorySkeleton() {
+  return <><HeaderSkeleton title="w-52" /><HistoryRows /></>;
 }
 
 function AdminSkeleton() {
@@ -31,10 +33,14 @@ function AdminSkeleton() {
       {[0, 1, 2, 3].map(i => <div key={i} className="space-y-3 border-white/10 px-5 py-5 sm:border-r sm:last:border-r-0"><Bar width="w-24" /><Bar width="w-12" height="h-7" /><Bar width="w-28" /></div>)}
     </div>
     <div className="my-6 flex gap-2"><Bar width="w-24" height="h-9" /><Bar width="w-24" height="h-9" /><Bar width="w-24" height="h-9" /></div>
-    <div className={`${surface} divide-y divide-white/10`}>
-      {[0, 1, 2].map(i => <div key={i} className="flex items-center justify-between gap-4 px-5 py-5"><div className="space-y-2"><Bar width="w-40" height="h-4" /><Bar width="w-56" /></div><Bar width="w-24" height="h-8" /></div>)}
-    </div>
+    <AdminRows />
   </>;
+}
+
+function AdminRows() {
+  return <div className={`${surface} divide-y divide-white/10`}>
+      {[0, 1, 2].map(i => <div key={i} className="flex items-center justify-between gap-4 px-5 py-5"><div className="space-y-2"><Bar width="w-40" height="h-4" /><Bar width="w-56" /></div><Bar width="w-24" height="h-8" /></div>)}
+    </div>;
 }
 
 function ProfileSkeleton() {
@@ -64,7 +70,9 @@ export function LoadingShell({ label = 'Loading…', skeleton = false, variant =
       <span className="sr-only">{label}</span>
       {skeleton ? (
         variant === 'history' ? <HistorySkeleton /> :
+        variant === 'history-list' ? <HistoryRows /> :
         variant === 'admin' ? <AdminSkeleton /> :
+        variant === 'admin-list' ? <AdminRows /> :
         variant === 'profile' ? <ProfileSkeleton /> :
         variant === 'video' ? <VideoSkeleton /> :
         <div className="mx-auto max-w-3xl"><HeaderSkeleton /><div className={`${surface} space-y-4 p-6`}><Bar width="w-3/5" height="h-6" /><Bar width="w-full" /><Bar width="w-4/5" /><Bar width="w-32" height="h-9" /></div></div>
