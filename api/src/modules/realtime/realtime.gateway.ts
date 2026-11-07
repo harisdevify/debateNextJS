@@ -63,6 +63,7 @@ interface FormalSession {
 
 
 const MAX_CHAT_LENGTH = 1000;
+const MAX_CAPTION_LENGTH = 240;
 const MAX_REPORT_DETAILS = 500;
 const MAX_REPORTS_PER_DAY = 20;
 const REPORT_REASONS: string[] = Object.values(ReportReason);
@@ -297,6 +298,7 @@ export class RealtimeGateway
       "chatMessage",
       (value: unknown, ack?: unknown) => void this.chat(client, value, ack),
     );
+    client.on('caption', (value: unknown) => void this.forwardCaption(client, value));
     client.on("leave", () => this.leaveDebate(client));
   }
 
@@ -638,6 +640,32 @@ export class RealtimeGateway
     } catch (error) {
       console.error("Block error:", error);
       reply({ ok: false, message: "Something went wrong!" });
+    }
+  }
+
+  /**
+   * Ephemeral, match-bound final captions. No transcription is persisted.
+   * Browser speech recognition is opt-in; partner receives only final phrases.
+   */
+  private async forwardCaption(socket: DebateSocket, payload: unknown): Promise<void> {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
+    const body = payload as Record<string, unknown>;
+    const peerId = socket.data.peerId;
+    const matchId = socket.data.matchId;
+    if (!matchId || !peerId || body.matchId !== matchId ||
+        typeof body.text !== 'string' || body.text.trim().length < 1 ||
+        body.text.trim().length > MAX_CAPTION_LENGTH ||
+        /[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/.test(body.text)) return;
+    const peer = this.server.sockets.sockets.get(peerId) as DebateSocket | undefined;
+    if (!peer || peer.data.peerId !== socket.id || peer.data.matchId !== matchId) return;
+    try {
+      if (!(await this.limits.allow('caption', String(socket.data.user!.id), 15, 10_000))) return;
+      // Peer may have left while the distributed limiter was checked.
+      if (socket.data.matchId !== matchId || socket.data.peerId !== peerId ||
+          peer.data.peerId !== socket.id || peer.data.matchId !== matchId || !peer.connected) return;
+      peer.emit('caption', { matchId, text: body.text.trim() });
+    } catch {
+      // Captions must never interrupt audio/video, and we do not log transcript content.
     }
   }
 
