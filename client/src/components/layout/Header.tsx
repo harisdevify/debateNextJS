@@ -1,6 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
-import { AppModal } from '@/components/ui/AppModal';
+import { Dialog } from '@/components/ui/Dialog';
 import { AlertTriangle, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -102,14 +102,14 @@ export default function Header() {
 
   return (
     <>
-      <AppModal open={logoutOpen} onClose={() => setLogoutOpen(false)} closeDisabled={loggingOut} title="Log out?" description="Are you sure you want to log out of your account?" size="sm" footer={
+      <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)} closeDisabled={loggingOut} title="Log out?" description="Are you sure you want to log out of your account?" size="sm" footer={
         <>
           <button type="button" disabled={loggingOut} onClick={() => setLogoutOpen(false)} className="min-h-9 rounded-lg border border-white/15 px-4 text-sm font-medium text-white/75 hover:bg-white/5">Cancel</button>
           <button type="button" disabled={loggingOut} onClick={() => void confirmLogout()} className="min-h-9 rounded-lg bg-red-500/90 px-4 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50">{loggingOut ? 'Logging out…' : 'Log out'}</button>
         </>
       }>
         <p className="text-sm leading-6 text-white/65">You can sign back in at any time.</p>
-      </AppModal>
+      </Dialog>
       {/* ── Top bar: glass + hairline border ── */}
       <header className="glass sticky top-0 z-50 border-b border-white/10">
         <div className="max-container flex h-14 items-center justify-between gap-4">
