@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { AppSelect } from '@/components/ui/AppSelect';
 import { actionLabels, type ActionKind, type AdminUser, type ListResult } from './types';
 
 interface Entry {
@@ -52,13 +53,13 @@ export function ModerationAudit({ refresh }: { refresh: number }) {
           <h2 className="text-xl font-semibold text-white">Moderation audit log</h2>
           <p className="mt-1 text-sm text-white/55">Recorded administrator actions, newest first. Internal reasons are visible to administrators only.</p>
         </div>
-        <label className="text-sm font-semibold text-white/70">Filter action
-          <select aria-label="Filter audit action" className="ml-0 mt-2 block min-h-11 rounded-xl border border-white/15 bg-[#101a17] px-3 text-white sm:ml-3 sm:mt-0 sm:inline-block"
+        <div className="min-w-[185px] text-sm font-semibold text-white/70">Filter action
+          <AppSelect aria-label="Filter audit action" className="mt-1 w-full"
             value={kind} onChange={(event) => { setPage(1); setKind(event.target.value); }}>
             <option value="ALL">All actions</option>
             {(Object.keys(actionLabels) as ActionKind[]).map((key) => <option key={key} value={key}>{actionLabels[key]}</option>)}
-          </select>
-        </label>
+          </AppSelect>
+        </div>
       </div>
       {loading && <p role="status" className="rounded-xl border border-white/10 p-6 text-sm text-white/50">Loading audit log…</p>}
       {!loading && error && <div role="alert" className="rounded-xl border border-red-400/30 p-5 text-sm">Could not load audit log. <button type="button" className="font-semibold text-primary underline" onClick={() => setRetry((n) => n + 1)}>Try again</button></div>}
@@ -82,7 +83,7 @@ export function ModerationAudit({ refresh }: { refresh: number }) {
           <p className="text-sm text-white/50">Page {result.page} · {result.total} actions</p>
           <div className="flex gap-2">
             <button type="button" disabled={loading || page <= 1} onClick={() => setPage((n) => n - 1)}
-              className="min-h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold text-white disabled:opacity-40">Previous</button>
+              className="min-h-9 rounded-lg border border-white/20 px-3 text-sm font-semibold text-white disabled:opacity-40">Previous</button>
             <button type="button" disabled={loading || page * result.pageSize >= result.total} onClick={() => setPage((n) => n + 1)}
               className="min-h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold text-white disabled:opacity-40">Next</button>
           </div>
