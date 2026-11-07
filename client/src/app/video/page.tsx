@@ -133,8 +133,8 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     status, language: preferences.language, micOn, maySpeak, onCaption: sendCaption,
   });
   const partnerConnected = status === 'connected';
-  const mobileChatVisible = chatOpen && partnerConnected;
   const [chatOpen, setChatOpen] = useState(false);
+  const mobileChatVisible = chatOpen && partnerConnected;
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
