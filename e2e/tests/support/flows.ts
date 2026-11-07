@@ -42,12 +42,20 @@ export async function login(page: Page, account: TestAccount) {
 
 export async function openDeviceCheck(page: Page, options: { topic?: string; language?: string; formal?: boolean } = {}) {
   await page.goto('/video');
-  await expect(page.getByRole('heading', { name: 'Find the right conversation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What would you like to discuss?' })).toBeVisible();
+
   if (options.topic) await page.getByRole('radio', { name: options.topic }).check();
+  await page.getByRole('button', { name: /Continue/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'Choose your language' })).toBeVisible();
   if (options.language) await page.getByRole('radio', { name: options.language }).check();
+  await page.getByRole('button', { name: /Continue/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'How would you like to discuss?' })).toBeVisible();
   if (options.formal) await page.getByRole('radio', { name: /Structured debate/i }).check();
-  await page.getByRole('button', { name: 'Find a debate partner' }).click();
-  await expect(page.getByRole('heading', { name: 'Ready for your conversation?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Check devices' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Check your camera and microphone' })).toBeVisible();
 }
 
 export async function startSearching(page: Page) {
