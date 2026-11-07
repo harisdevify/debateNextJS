@@ -655,7 +655,7 @@ export class RealtimeGateway
     if (!matchId || !peerId || body.matchId !== matchId ||
         typeof body.text !== 'string' || body.text.trim().length < 1 ||
         body.text.trim().length > MAX_CAPTION_LENGTH ||
-        /[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/.test(body.text)) return;
+        /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(body.text)) return;
     const peer = this.server.sockets.sockets.get(peerId) as DebateSocket | undefined;
     if (!peer || peer.data.peerId !== socket.id || peer.data.matchId !== matchId) return;
     try {
