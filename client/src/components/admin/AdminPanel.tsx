@@ -8,6 +8,7 @@ import {
 } from 'react';
 import api from '@/lib/api';
 import { AppSelect } from '@/components/ui/AppSelect';
+import { LoadingShell } from '@/components/ui/LoadingShell';
 import { ClipboardList, ShieldCheck, UsersRound, ScrollText, Search, RefreshCw } from 'lucide-react';
 import { ActionForm, type ActionBody } from './ActionForm';
 import { ModerationOverview } from './ModerationOverview';
@@ -225,11 +226,7 @@ export function AdminPanel() {
           </button>
         </div>
       )}
-      {loading && (
-        <p role="status" className="my-4 text-muted">
-          Loading...
-        </p>
-      )}
+      {loading && <LoadingShell label="Loading moderation data…" skeleton />}
       {tab === 'audit' ? <ModerationAudit refresh={refresh} /> : detail && user ? (
         <>
           <button
