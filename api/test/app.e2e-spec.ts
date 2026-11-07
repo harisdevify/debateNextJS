@@ -588,6 +588,44 @@ describe("Debate API (e2e)", () => {
       expect(unexpected).toHaveLength(0);
     });
 
+    it("keeps screen-share state within the active matched pair", async () => {
+      const a = await connect((await loginAs()).cookie);
+      const b = await connect((await loginAs()).cookie);
+      const outsider = await connect((await loginAs()).cookie);
+      const waiting = once(a, "waiting");
+      a.emit("find-partner");
+      await waiting;
+      const matchedA = once<{ matchId: string }>(a, "matched");
+      const matchedB = once(b, "matched");
+      b.emit("find-partner");
+      const [{ matchId }] = await Promise.all([matchedA, matchedB]);
+
+      const unexpected: unknown[] = [];
+      outsider.on("screen-share-state", (payload) => unexpected.push(payload));
+      const enabled = once<{ matchId: string; active: boolean }>(b, "screen-share-state");
+      a.emit("screen-share-state", { matchId, active: true });
+      expect(await enabled).toEqual({ matchId, active: true });
+      let extra = 0;
+      b.on("screen-share-state", () => extra++);
+      a.emit("screen-share-state", { matchId: "old-match", active: false });
+      a.emit("screen-share-state", { matchId, active: "yes" });
+      outsider.emit("screen-share-state", { matchId, active: true });
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      expect(extra).toBe(0);
+      expect(unexpected).toHaveLength(0);
+
+      const disabled = once<{ matchId: string; active: boolean }>(b, "screen-share-state");
+      a.emit("screen-share-state", { matchId, active: false });
+      expect(await disabled).toEqual({ matchId, active: false });
+      const left = once(b, "peer-left");
+      a.emit("leave");
+      await left;
+      a.emit("screen-share-state", { matchId, active: true });
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(extra).toBe(1);
+      expect(unexpected).toHaveLength(0);
+    });
+
     it("matches two users, relays signaling + chat only to the partner", async () => {
       const [u1, u2, u3] = [await loginAs(), await loginAs(), await loginAs()];
       const a = await connect(u1.cookie);
