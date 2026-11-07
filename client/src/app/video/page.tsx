@@ -133,7 +133,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     status, language: preferences.language, micOn, maySpeak, onCaption: sendCaption,
   });
   const partnerConnected = status === 'connected';
-    const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   // messages the user has already seen (mobile chat drawer)
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -475,11 +475,11 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   bg-gradient-to-br from-[#00e5c0] to-[#00aaff]
                   shadow-[0_4px_22px_rgba(0,229,192,0.32)]
                   transition-all duration-200
-                  hover:scale-110 hover:shadow-[0_8px_30px_rgba(0,229,192,0.48)]
+                  hover:bg-primary/15
                   active:scale-[0.87]
                   min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60"
               >
-                <MessageCircle size={19} color="#fff" />
+                <MessageCircle size={19} aria-hidden="true" />
                 {unread > 0 && (
                   <span
                     className="badge-anim absolute top-0.5 right-0.5
