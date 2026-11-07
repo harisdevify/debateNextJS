@@ -162,7 +162,7 @@ export default function DebateHistoryPage() {
         <p>Only your ended sessions appear here. No recordings, chat messages or partner profiles are stored in debate history. “Completed” means the formal timer finished.</p>
       </div>
 
-      {fetching && <LoadingShell label="Loading debate activity…" skeleton />}
+      {fetching && <LoadingShell label="Loading debate activity…" skeleton variant="history" />}
       {!fetching && error && <PageState status="alert" title="Could not load your history" description="Your debates have not been changed. Try again when your connection is available." action={<button type="button" onClick={() => setRetry((n) => n + 1)} className="min-h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-background">Try again</button>} />}
       {!fetching && !error && data?.items.length === 0 && <PageState title="No past debates yet" description="After your first conversation ends, its topic, mode and duration will appear here." action={<Link href="/video" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-background">Find a debate partner</Link>} />}
 
