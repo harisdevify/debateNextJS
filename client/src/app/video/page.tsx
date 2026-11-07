@@ -1,6 +1,7 @@
 'use client';
 import { ChatInputRow } from '@/components/debate/ChatInputRow';
 import { PageState } from '@/components/ui/PageState';
+import { LoadingShell } from '@/components/ui/LoadingShell';
 import { DebateSetup } from '@/components/debate/DebateSetup';
 import { PreDebateCheck } from '@/components/debate/PreDebateCheck';
 import { MatchSearchStatus } from '@/components/debate/MatchSearchStatus';
@@ -595,7 +596,7 @@ export default function VideoPage() {
     }
   }, [loading, verificationError, user, accepted, router]);
 
-  if (loading) return <PageState title="Checking your session…" description="Verifying your account before opening the camera." />;
+  if (loading) return <LoadingShell label="Checking your session…" skeleton variant="video" />;
   if (verificationError) return <PageState status="alert" title="Connection interrupted" description="Your session could not be verified. Your login has not been cleared." action={<button className="min-h-11 rounded-lg bg-primary px-5 font-semibold text-background" onClick={() => void retrySession()}>Retry session</button>} />;
   if (!user || !accepted) return null;
   return <AuthenticatedDebate />;
@@ -609,14 +610,14 @@ function AuthenticatedDebate() {
     setStage('setup');
     setStream(null);
   };
-  if (stage === 'setup') return <DebateSetup initial={preferences} onStart={(selected) => {
+  if (stage === 'setup') return <div className="step-reveal flex min-w-0 flex-1 flex-col"><DebateSetup initial={preferences} onStart={(selected) => {
     setPreferences(selected);
     setStage('check');
-  }} />;
-  if (stage === 'check') return <PreDebateCheck preferences={preferences} onBack={backToSetup} onJoin={(ready) => {
+  }} /></div>;
+  if (stage === 'check') return <div className="step-reveal flex min-w-0 flex-1 flex-col"><PreDebateCheck preferences={preferences} onBack={backToSetup} onJoin={(ready) => {
     setStream(ready);
     setStage('room');
-  }} />;
+  }} /></div>;
   if (!stream) return null;
   return <DebateRoom preferences={preferences} initialStream={stream} onChangePreferences={backToSetup} />;
 }
