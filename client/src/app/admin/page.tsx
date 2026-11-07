@@ -1,32 +1,17 @@
 'use client';
 import Link from 'next/link';
+import { LockKeyhole, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { PageState } from '@/components/ui/PageState';
+import { StatusPage } from '@/components/ui/StatusPage';
+
 export default function AdminPage() {
   const { user, loading, verificationError, retrySession } = useAuth();
-  if (loading)
-    return <PageState title="Checking access…" description="Verifying administrator permissions." />;
-  if (verificationError) return <PageState status="alert" title="Could not verify administrator access" description="The authentication server may be unavailable. Your session has not been cleared." action={<button className="min-h-11 rounded-xl bg-primary px-5 text-background" onClick={() => void retrySession()}>Retry</button>} />;
-  if (!user)
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Please log in</h1>
-        <p className="my-4">An administrator account is required.</p>
-        <Link href="/login" className="text-primary underline">
-          Go to login
-        </Link>
-      </main>
-    );
-  if (user.role !== 'ADMIN')
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Admin access required</h1>
-        <p className="my-4">This page is available to administrators only.</p>
-        <Link href="/" className="text-primary underline">
-          Back to home
-        </Link>
-      </main>
-    );
+
+  if (loading) return <PageState title="Checking access…" description="Verifying administrator permissions." />;
+  if (verificationError) return <PageState status="alert" title="Could not verify administrator access" description="The authentication server may be unavailable. Your session has not been cleared." action={<button type="button" className="min-h-9 rounded-lg bg-primary px-4 text-sm font-semibold text-background" onClick={() => void retrySession()}>Retry</button>} />;
+  if (!user) return <StatusPage eyebrow="401 · Sign in required" title="Sign in to continue" description="An administrator account is required to access the moderation workspace." icon={LockKeyhole} action={<Link href="/login" className="inline-flex min-h-9 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-background">Sign in</Link>} />;
+  if (user.role !== 'ADMIN') return <StatusPage eyebrow="403 · Access restricted" title="Administrator access required" description="You do not have permission to view moderation reports or manage accounts." icon={ShieldAlert} />;
   return <AdminPanel />;
 }
