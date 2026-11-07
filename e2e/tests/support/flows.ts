@@ -60,7 +60,7 @@ export async function openDeviceCheck(page: Page, options: { topic?: string; lan
 
 export async function startSearching(page: Page) {
   await page.getByRole('button', { name: /Enable camera & microphone/i }).click();
-  await expect(page.getByText('Camera and microphone ready')).toBeVisible();
+  await expect(page.getByText('Camera and microphone are ready')).toBeVisible();
   await page.getByRole('button', { name: 'Find a debate partner' }).click();
   await expect(page.getByRole('heading', { name: 'Finding your debate partner' })).toBeVisible();
 }
