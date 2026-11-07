@@ -27,3 +27,18 @@ it('respects disabled state and retains selected option in the trigger', () => {
   expect((trigger as HTMLButtonElement).disabled).toBe(true);
   expect(trigger.textContent).toContain('Camera A');
 });
+
+it('supports keyboard navigation and selects the highlighted option', () => {
+  const onChange = vi.fn();
+  render(<AppSelect aria-label="Language" defaultValue="en" onChange={(event) => onChange(event.target.value)}>
+    <option value="en">English</option>
+    <option value="ur">Urdu</option>
+  </AppSelect>);
+  const trigger = screen.getByRole('combobox', { name: 'Language' });
+  fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+  fireEvent.keyDown(trigger, { key: 'Enter' });
+  expect(onChange).toHaveBeenCalledWith('ur');
+  expect(trigger.textContent).toContain('Urdu');
+});
