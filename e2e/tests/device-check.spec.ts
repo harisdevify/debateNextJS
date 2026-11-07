@@ -18,7 +18,7 @@ test('fake camera preview is live and device tracks stop when returning', async 
   await login(page, await registerAccount(request));
   await openDeviceCheck(page);
   await page.getByRole('button', { name: /Enable camera & microphone/i }).click();
-  await expect(page.getByText('Camera and microphone ready')).toBeVisible();
+  await expect(page.getByText('Camera and microphone are ready')).toBeVisible();
   const counts = await page.evaluate(() => {
     const video = document.querySelector('video[aria-label="Camera preview"]') as HTMLVideoElement;
     const stream = video.srcObject as MediaStream;
@@ -47,5 +47,5 @@ test('camera permission failure is recoverable without premature matchmaking', a
   await expect(page.getByText(/access was denied/i)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Finding your debate partner' })).toHaveCount(0);
   await page.getByRole('button', { name: /Enable camera & microphone/i }).click();
-  await expect(page.getByText('Camera and microphone ready')).toBeVisible();
+  await expect(page.getByText('Camera and microphone are ready')).toBeVisible();
 });
