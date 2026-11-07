@@ -132,229 +132,131 @@ function ProfileContent() {
     { icon: MapPin, label: 'Country', value: form.country || '—' },
   ];
 
+  const toggleEdit = () => {
+    if (editing) {
+      // Dismiss unsaved changes without changing the stored user profile.
+      setForm({
+        fullname: storedUser?.fullname || '',
+        gender: storedUser?.gender || '',
+        education: storedUser?.education || '',
+        country: storedUser?.country || '',
+      });
+    }
+    setEditing((current) => !current);
+  };
+
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <section className="relative flex-1 px-4 py-10 sm:py-16">
-        {/* Background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-            }}
-          />
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px]"
-            style={{
-              background:
-                'radial-gradient(ellipse, rgba(0,191,166,0.1) 0%, transparent 70%)',
-            }}
-          />
+    <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.13em] text-primary">Your account</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Profile</h1>
+          <p className="mt-1 text-sm text-white/50">Manage your details and return to your conversations.</p>
         </div>
-
-        <div className="relative z-10 max-w-[900px] mx-auto">
-          {/* ── TOP PROFILE CARD ── */}
-          <div
-            className="relative rounded-[26px] overflow-hidden border border-white/15 mb-7 shadow-[0_20px_55px_rgba(0,0,0,.25)]
-                          bg-[rgba(10,24,22,0.85)]"
-          >
-            {/* Banner */}
-            <div
-              className="h-40 w-full sm:h-44"
-              style={{
-                background: 'linear-gradient(115deg, #163d32 0%, #103128 38%, #101b18 100%)',
-                backgroundImage: 'repeating-linear-gradient(110deg,transparent,transparent 27px,rgba(255,255,255,0.045) 28px,transparent 29px)',
-              }}
-            />
-
-            {/* Avatar + Name row */}
-            <div className="px-4 pb-6 sm:px-7 sm:pb-7">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-14">
-                {/* Avatar */}
-                <div className="relative w-fit">
-                  <div
-                    className={`w-24 h-24 rounded-2xl border-4 border-[rgba(10,24,22,1)]
-                                flex items-center justify-center overflow-hidden
-                                bg-gradient-to-br ${avatarGrad} shadow-xl`}
-                  >
-                    {avatarSrc ? (
-                      // avatar is a local data URL, so next/image cannot optimise it
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={avatarSrc}
-                        alt="Profile picture"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-3xl font-black text-white">
-                        {initials}
-                      </span>
-                    )}
-                  </div>
-                  {/* camera button */}
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    aria-label="Change profile picture"
-                    title="Change profile picture"
-                    className="absolute -bottom-2 -right-2 size-10 rounded-xl flex items-center justify-center
-                               bg-primary text-[#0a0a0a] shadow-lg
-                               transition-all duration-200 hover:scale-110 hover:shadow-[0_0_16px_rgba(0,191,166,0.5)]"
-                  >
-                    <Camera size={14} />
-                  </button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                </div>
-
-                {/* Name + badge */}
-                <div className="flex-1 sm:pb-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-3xl font-semibold tracking-tight text-white leading-tight">
-                      {form.fullname || 'Your Name'}
-                    </h1>
-                    <span
-                      className="flex items-center gap-1 px-2.5 py-0.5 rounded-full
-                                     bg-[rgba(0,191,166,0.12)] border border-[rgba(0,191,166,0.25)]
-                                     text-primary text-xs font-semibold"
-                    >
-                      <ShieldCheck size={11} />
-                      Community member
-                    </span>
-                  </div>
-                  <p className="text-white/40 text-sm mt-1">
-                    {form.education || 'No education set'} ·{' '}
-                    {form.country || 'No country set'}
-                  </p>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex flex-wrap gap-2 sm:pb-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditing((p) => !p)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                                border transition-all duration-200
-                                ${
-                                  editing
-                                    ? 'bg-white/10 border-white/20 text-white'
-                                    : 'bg-[rgba(0,191,166,0.1)] border-[rgba(0,191,166,0.25)] text-primary hover:bg-[rgba(0,191,166,0.2)]'
-                                }`}
-                  >
-                    <Edit3 size={14} />
-                    {editing ? 'Cancel' : 'Edit Profile'}
-                  </button>
-                  <Link href="/history" className="flex min-h-10 items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white/75 transition-colors hover:border-primary/30 hover:text-primary">
-                    <Calendar size={14} />
-                    History
-                  </Link>
-                  <Link
-                    href="/video"
-                    className="group flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
-                               bg-primary text-[#0a0a0a] transition-all duration-200
-                               hover:bg-[#00d4b8] hover:shadow-[0_0_20px_rgba(0,191,166,0.4)]"
-                  >
-                    <Video size={14} />
-                    Debate
-                    <ArrowRight
-                      size={13}
-                      className="transition-transform duration-200 group-hover:translate-x-0.5"
-                    />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── BOTTOM GRID: Info + Edit Form ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Info Card */}
-            <div className="rounded-2xl border border-white/[0.07] bg-[rgba(10,24,22,0.8)] p-6">
-              <h2 className="text-white font-bold text-[1rem] mb-5 flex items-center gap-2">
-                <User size={16} className="stroke-primary" />
-                Profile Details
-              </h2>
-              <div className="flex flex-col gap-3">
-                {infoItems.map(({ icon: Icon, label, value }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl
-                               bg-white/[0.03] border border-white/[0.05]"
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center
-                                    bg-[rgba(0,191,166,0.1)] border border-[rgba(0,191,166,0.12)] shrink-0"
-                    >
-                      <Icon size={15} className="stroke-primary" />
-                    </div>
-                    <div>
-                      <p className="text-white/35 text-[0.7rem] uppercase tracking-wider font-semibold">
-                        {label}
-                      </p>
-                      <p className="text-white text-[0.9rem] font-medium leading-tight">
-                        {value}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Member since */}
-              <div
-                className="mt-5 flex items-center gap-2 px-4 py-3 rounded-xl
-                              bg-[rgba(0,191,166,0.05)] border border-[rgba(0,191,166,0.12)]"
-              >
-                <Calendar size={14} className="stroke-primary/60 shrink-0" />
-                <p className="text-white/35 text-xs">
-                  Member since <span className="text-white/60">2025</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Edit Form Card */}
-            <div
-              className={`rounded-2xl border bg-[rgba(10,24,22,0.8)] p-6 transition-all duration-300
-                            ${editing ? 'border-[rgba(0,191,166,0.25)]' : 'border-white/[0.07]'}`}
-            >
-              <h2 className="text-white font-bold text-[1rem] mb-5 flex items-center gap-2">
-                <Edit3 size={16} className="stroke-primary" />
-                Edit Profile
-                {!editing && (
-                  <span className="text-white/25 text-xs font-normal ml-1">
-                    — click &ldquo;Edit Profile&rdquo; to unlock
-                  </span>
-                )}
-              </h2>
-
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <TextField label="Full Name" name="fullname" type="text" required value={form.fullname} onChange={handleChange} placeholder="Enter your full name" disabled={!editing} />
-
-                <SelectField label="Gender" name="gender" required value={form.gender} onChange={handleChange} disabled={!editing}>
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </SelectField>
-
-                <TextField label="Education" name="education" type="text" required value={form.education} onChange={handleChange} placeholder="e.g. Islamic Studies" disabled={!editing} />
-
-                <TextField label="Country" name="country" type="text" required value={form.country} onChange={handleChange} placeholder="Enter your country" disabled={!editing} />
-
-                {editing && (
-                  <PrimaryButton type="submit" className="mt-2"><Save size={16} /> Save Changes</PrimaryButton>
-                )}
-              </form>
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/history" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/15 px-3 text-sm font-medium text-white/75 transition-colors hover:border-primary/30 hover:text-white">
+            <Calendar size={15} aria-hidden="true" /> History
+          </Link>
+          <Link href="/video" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-background transition-colors hover:bg-primary-hover">
+            <Video size={15} aria-hidden="true" /> Start debate <ArrowRight size={14} aria-hidden="true" />
+          </Link>
         </div>
+      </div>
+
+      <section aria-label="Account overview" className="flex flex-col gap-4 rounded-2xl border border-white/12 bg-[#111b19] p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+        <div className="relative w-fit shrink-0">
+          <div className={`flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br ${avatarGrad} sm:size-24`}>
+            {avatarSrc ? (
+              // Avatar is a local data URL; next/image cannot optimize it.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarSrc} alt="Profile picture" className="size-full object-cover" />
+            ) : (
+              <span className="text-2xl font-bold text-white">{initials}</span>
+            )}
+          </div>
+          <button type="button" onClick={() => fileRef.current?.click()}
+            aria-label="Change profile picture" title="Change profile picture"
+            className="absolute -bottom-2 -right-2 flex size-9 items-center justify-center rounded-lg border-2 border-[#111b19] bg-primary text-background transition-colors hover:bg-primary-hover">
+            <Camera size={16} aria-hidden="true" />
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden"
+            aria-label="Upload profile picture" onChange={handleAvatarChange} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="break-words text-xl font-semibold text-white sm:text-2xl">{form.fullname || 'Your name'}</h2>
+          <p className="mt-1 break-all text-sm text-white/55">{storedUser?.email || '—'}</p>
+          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.07] px-2.5 py-1 text-xs font-medium text-primary">
+            <ShieldCheck size={13} aria-hidden="true" /> Community member
+          </span>
+        </div>
+        <button type="button" onClick={toggleEdit}
+          aria-expanded={editing} aria-controls="profile-edit-form"
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-white/15 px-3 text-sm font-semibold text-white/80 transition-colors hover:border-primary/35 hover:text-primary sm:self-center">
+          <Edit3 size={15} aria-hidden="true" /> {editing ? 'Cancel editing' : 'Edit profile'}
+        </button>
       </section>
-    </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <section aria-labelledby="profile-details-heading" className="min-w-0 rounded-2xl border border-white/12 bg-[#111b19] p-4 sm:p-5">
+          <h2 id="profile-details-heading" className="flex items-center gap-2 text-base font-semibold text-white">
+            <User size={17} className="text-primary" aria-hidden="true" /> Personal details
+          </h2>
+          <p className="mt-1 text-xs text-white/45">Information associated with your account.</p>
+          <dl className="mt-4 divide-y divide-white/10">
+            {infoItems.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex min-w-0 items-start gap-3 py-3 first:pt-0 last:pb-0">
+                <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-primary">
+                  <Icon size={15} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium text-white/45">{label}</dt>
+                  <dd className="mt-0.5 break-words text-sm font-medium text-white/90">{value}</dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <section aria-labelledby="profile-form-heading" className={`min-w-0 rounded-2xl border bg-[#111b19] p-4 transition-colors sm:p-5 ${editing ? 'border-primary/35' : 'border-white/12'}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 id="profile-form-heading" className="flex items-center gap-2 text-base font-semibold text-white">
+                <Edit3 size={17} className="text-primary" aria-hidden="true" /> Edit details
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-white/45">
+                {editing ? 'Update your details below and save changes.' : 'Select Edit profile above to change your details.'}
+              </p>
+            </div>
+            {!editing && <span className="shrink-0 rounded-md border border-white/10 px-2 py-1 text-xs text-white/45">Read only</span>}
+          </div>
+
+          <form id="profile-edit-form" onSubmit={handleSubmit} className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <TextField label="Full Name" name="fullname" type="text" required value={form.fullname}
+                onChange={handleChange} placeholder="Enter your full name" disabled={!editing} />
+            </div>
+            <SelectField label="Gender" name="gender" required value={form.gender}
+              onChange={handleChange} disabled={!editing}>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </SelectField>
+            <TextField label="Education" name="education" type="text" required value={form.education}
+              onChange={handleChange} placeholder="e.g. Islamic Studies" disabled={!editing} />
+            <div className="sm:col-span-2">
+              <TextField label="Country" name="country" type="text" required value={form.country}
+                onChange={handleChange} placeholder="Enter your country" disabled={!editing} />
+            </div>
+            {editing && (
+              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4 sm:col-span-2">
+                <PrimaryButton type="submit" className="!w-auto min-w-32"><Save size={15} aria-hidden="true" /> Save changes</PrimaryButton>
+                <button type="button" onClick={toggleEdit} className="min-h-10 rounded-lg border border-white/15 px-3 text-sm font-medium text-white/70 hover:bg-white/5">Cancel</button>
+              </div>
+            )}
+          </form>
+        </section>
+      </div>
+    </main>
   );
 }
 
