@@ -1,5 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
+import { Dialog } from '@/components/ui/Dialog';
 import { AlertTriangle, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -18,6 +19,8 @@ export default function Header() {
   const { user, logout, loading, verificationError } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   // The active debate page already provides the debate flow and its controls.
   const isDebatePage = pathname === '/video' || pathname.startsWith('/video/');
 
@@ -46,12 +49,25 @@ export default function Header() {
     };
   }, [sidebarOpen]);
 
-  const handleLogout = async (e: MouseEvent<HTMLElement>) => {
+  const handleLogout = (e: MouseEvent<HTMLElement>) => {
     e.preventDefault();
-    await logout(); // clears the cookie on the server, then the local state
-    toast.success('You have been logged out.');
     setSidebarOpen(false);
-    router.push('/login');
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      setLogoutOpen(false);
+      toast.success('You have been logged out.');
+      router.push('/login');
+    } catch {
+      toast.error('Could not log out. Please try again.');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const navLinkClass = (href: string) =>
@@ -86,6 +102,14 @@ export default function Header() {
 
   return (
     <>
+      <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)} closeDisabled={loggingOut} title="Log out?" description="Are you sure you want to log out of your account?" size="sm" footer={
+        <>
+          <button type="button" disabled={loggingOut} onClick={() => setLogoutOpen(false)} className="min-h-9 rounded-lg border border-white/15 px-4 text-sm font-medium text-white/75 hover:bg-white/5">Cancel</button>
+          <button type="button" disabled={loggingOut} onClick={() => void confirmLogout()} className="min-h-9 rounded-lg bg-red-500/90 px-4 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50">{loggingOut ? 'Logging out…' : 'Log out'}</button>
+        </>
+      }>
+        <p className="text-sm leading-6 text-white/65">You can sign back in at any time.</p>
+      </Dialog>
       {/* ── Top bar: glass + hairline border ── */}
       <header className="glass sticky top-0 z-50 border-b border-white/10">
         <div className="max-container flex h-14 items-center justify-between gap-4">

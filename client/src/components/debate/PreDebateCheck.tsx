@@ -158,20 +158,20 @@ export function PreDebateCheck({ preferences, onBack, onJoin }: Props) {
           <p className="mt-1 text-xs leading-5 text-white/50">Choose which devices to use for your conversation.</p>
           <div className="mt-5 space-y-4">
             <div>
-              <label htmlFor="debate-camera" className="mb-2 flex items-center gap-2 text-sm font-medium text-white/80">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white/80">
                 <Camera size={15} className="text-primary" aria-hidden="true" /> Camera
-              </label>
-              <AppSelect id="debate-camera" value={camera} disabled={phase === 'loading' || !cameraDevices.length}
+              </div>
+              <AppSelect aria-label="Camera" id="debate-camera" value={camera} disabled={phase === 'loading' || !cameraDevices.length}
                 onChange={(event) => void acquire(event.target.value, microphone)}>
                 {!cameraDevices.length && <option value={camera}>Enable preview to detect cameras</option>}
                 {cameraDevices.map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${i + 1}`}</option>)}
               </AppSelect>
             </div>
             <div>
-              <label htmlFor="debate-mic" className="mb-2 flex items-center gap-2 text-sm font-medium text-white/80">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white/80">
                 <Mic size={15} className="text-primary" aria-hidden="true" /> Microphone
-              </label>
-              <AppSelect id="debate-mic" value={microphone} disabled={phase === 'loading' || !micDevices.length}
+              </div>
+              <AppSelect aria-label="Microphone" id="debate-mic" value={microphone} disabled={phase === 'loading' || !micDevices.length}
                 onChange={(event) => void acquire(camera, event.target.value)}>
                 {!micDevices.length && <option value={microphone}>Enable preview to detect microphones</option>}
                 {micDevices.map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${i + 1}`}</option>)}

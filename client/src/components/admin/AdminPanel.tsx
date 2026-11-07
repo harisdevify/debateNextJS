@@ -7,6 +7,9 @@ import {
   type FormEvent,
 } from 'react';
 import api from '@/lib/api';
+import { AppSelect } from '@/components/ui/AppSelect';
+import { LoadingShell } from '@/components/ui/LoadingShell';
+import { ClipboardList, ShieldCheck, UsersRound, ScrollText, Search, RefreshCw } from 'lucide-react';
 import { ActionForm, type ActionBody } from './ActionForm';
 import { ModerationOverview } from './ModerationOverview';
 import { ModerationAudit } from './ModerationAudit';
@@ -19,7 +22,7 @@ import {
   type UserDetail,
 } from './types';
 const button =
-  'min-h-11 rounded-xl border border-border px-4 py-2 text-sm font-semibold transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/75 transition-colors hover:border-primary/40 hover:bg-white/[0.05] hover:text-white focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40';
 const date = (value: string) => new Date(value).toLocaleString();
 function History({ actions }: { actions: AuditAction[] }) {
   return (
@@ -181,30 +184,21 @@ export function AdminPanel() {
     : null;
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <header>
-        <p className="text-sm font-semibold text-primary">Admin workspace</p>
-        <h1 className="mt-2 text-3xl font-bold">Keep debates respectful</h1>
-        <p className="mt-3 text-muted">
-          Review incoming reports, make accountable decisions and inspect moderation actions.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary"><ShieldCheck size={15} /> Moderation workspace</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Admin dashboard</h1>
+          <p className="mt-1 max-w-xl text-sm text-white/50">Review reports, manage user access and track moderation actions.</p>
+        </div>
+        <button type="button" className={button} disabled={loading} onClick={() => setRefresh((n) => n + 1)}><RefreshCw size={14} /> Refresh data</button>
       </header>
       <ModerationOverview refresh={refresh} />
-      <nav aria-label="Admin sections" className="my-6 flex flex-wrap gap-3">
-        <button
-          className={button}
-          aria-pressed={tab === 'reports'}
-          onClick={() => switchTab('reports')}
-        >
-          Reports
-        </button>
-        <button
-          className={button}
-          aria-pressed={tab === 'users'}
-          onClick={() => switchTab('users')}
-        >
-          Users
-        </button>
-        <button type="button" className={button} aria-pressed={tab === 'audit'} onClick={() => switchTab('audit')}>Audit log</button>
+      <nav aria-label="Admin sections" className="my-6 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-[#111b19] p-1 sm:w-fit">
+        {([{ key: 'reports', label: 'Reports', icon: ClipboardList }, { key: 'users', label: 'Users', icon: UsersRound }, { key: 'audit', label: 'Audit log', icon: ScrollText }] as const).map(({ key, label, icon: Icon }) => (
+          <button key={key} type="button" onClick={() => switchTab(key)} aria-pressed={tab === key} className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors ${tab === key ? 'bg-primary/10 text-primary' : 'text-white/55 hover:bg-white/5 hover:text-white'}`}>
+            <Icon size={15} aria-hidden="true" />{label}
+          </button>
+        ))}
       </nav>
       {notice && (
         <p
@@ -232,11 +226,7 @@ export function AdminPanel() {
           </button>
         </div>
       )}
-      {loading && (
-        <p role="status" className="my-4 text-muted">
-          Loading...
-        </p>
-      )}
+      {loading && <LoadingShell label="Loading moderation data…" skeleton />}
       {tab === 'audit' ? <ModerationAudit refresh={refresh} /> : detail && user ? (
         <>
           <button
@@ -250,8 +240,8 @@ export function AdminPanel() {
           >
             Back to {tab}
           </button>
-          <div className="mt-5 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-            <section className="min-w-0 rounded-2xl border border-border bg-surface p-5">
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <section className="min-w-0 rounded-xl border border-white/10 bg-[#111b19] p-4 sm:p-5">
               <h2 className="break-words text-xl font-bold">{user.fullname}</h2>
               <p className="mt-1 break-all text-sm text-muted">{user.email}</p>
               <div className="mt-3">
@@ -353,31 +343,25 @@ export function AdminPanel() {
         <section>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
             {tab === 'reports' && (
-              <label className="text-sm">Show reports
-                <select value={filter} onChange={(event) => { setPage(1); setFilter(event.target.value); }}
+              <div className="min-w-[180px] text-xs font-semibold text-white/60">Show reports
+                <AppSelect aria-label="Report status" value={filter} onChange={(event) => { setPage(1); setFilter(event.target.value); }}
                   className="ml-0 mt-2 block min-h-11 w-full rounded-xl border border-border bg-surface px-3 sm:ml-3 sm:mt-0 sm:inline-block sm:w-auto">
                   <option value="OPEN">Needs review</option>
                   <option value="REVIEWED">Reviewed</option>
-                </select>
-              </label>
+                </AppSelect>
+              </div>
             )}
             <form onSubmit={submitSearch} className="flex w-full max-w-lg flex-wrap gap-2 sm:flex-nowrap">
               <label className="min-w-[12rem] flex-1">
                 <span className="sr-only">Search name or email</span>
                 <input value={search} onChange={(event) => setSearch(event.target.value)}
                   maxLength={150} placeholder={tab === 'reports' ? 'Search reporter or reported user' : 'Search name or email'}
-                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-surface px-3 focus-visible:ring-2 focus-visible:ring-primary/30"/>
+                  className="min-h-9 w-full min-w-0 rounded-lg border border-white/15 bg-[#111b19] px-3 text-sm text-white placeholder:text-white/35 focus-visible:ring-2 focus-visible:ring-primary/30"/>
               </label>
-              <button type="submit" className={button}>Search</button>
+              <button type="submit" className={button}><Search size={14} /> Search</button>
             </form>
             {term && <button type="button" className={button} onClick={() => { setSearch(''); setTerm(''); setPage(1); }}>Clear search</button>}
-            <button
-              className={button}
-              onClick={() => setRefresh((n) => n + 1)}
-              disabled={loading}
-            >
-              Refresh
-            </button>
+
           </div>
           {!loading && list && list.items.length === 0 && (
             <p className="rounded-2xl border border-border p-8 text-center text-muted">
@@ -386,59 +370,38 @@ export function AdminPanel() {
                 : 'No users found.'}
             </p>
           )}
-          <div className="grid min-w-0 gap-3 md:grid-cols-2">
-            {!loading &&
-              list?.items.map((item) =>
-                'reportedUser' in item ? (
-                  <article
-                    key={item.id}
-                    className="min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5"
-                  >
-                    <p className="text-xs text-muted">
-                      Report #{item.id} - {date(item.createdAt)}
-                    </p>
-                    <h2 className="mt-2 break-words font-bold">
-                      {item.reportedUser.fullname}
-                    </h2>
-                    <p className="mt-2 text-sm">
-                      {item.reason.replaceAll('_', ' ').toLowerCase()}
-                    </p>
-                    <p className="mt-2 line-clamp-2 break-words text-sm text-muted">{item.details || 'No additional details provided.'}</p>
-                    <p className="mt-2 text-xs text-muted">Reported by {item.reporter.fullname}</p>
-                    <button
-                      className={`${button} mt-4`}
-                      onClick={() => void open('reports', item.id)}
-                    >
-                      Review report
-                    </button>
-                  </article>
-                ) : (
-                  <article
-                    key={item.id}
-                    className="rounded-2xl border border-border bg-surface p-5"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="break-words font-bold">{item.fullname}</h2>
+          <div className="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-[#111b19]">
+            {!loading && list?.items.map((item) =>
+              'reportedUser' in item ? (
+                <article key={item.id} className="flex min-w-0 flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="break-words text-sm font-semibold text-white">{item.reportedUser.fullname}</h2>
+                      <span className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-medium text-white/55">Report #{item.id}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-white/60">{item.reason.replaceAll('_', ' ').toLowerCase()} · Reported by {item.reporter.fullname}</p>
+                    <p className="mt-1 line-clamp-1 break-words text-xs text-white/40">{item.details || 'No additional details provided.'}</p>
+                    <p className="mt-1 text-[11px] text-white/35">{date(item.createdAt)}</p>
+                  </div>
+                  <button type="button" className={button} onClick={() => void open('reports', item.id)}>Review report</button>
+                </article>
+              ) : (
+                <article key={item.id} className="flex min-w-0 flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="break-words text-sm font-semibold text-white">{item.fullname}</h2>
                       <Status user={item} />
                     </div>
-                    <p className="mt-2 break-all text-sm text-muted">
-                      {item.email}
-                    </p>
-                    <p className="mt-2 text-xs text-muted">
-                      {item.role === 'ADMIN' ? 'Administrator' : 'Member'}
-                    </p>
-                    <button
-                      className={`${button} mt-4`}
-                      onClick={() => void open('users', item.id)}
-                    >
-                      View user
-                    </button>
-                  </article>
-                )
-              )}
+                    <p className="mt-1 break-all text-xs text-white/55">{item.email}</p>
+                    <p className="mt-1 text-[11px] text-white/35">{item.role === 'ADMIN' ? 'Administrator' : 'Member'}</p>
+                  </div>
+                  <button type="button" className={button} onClick={() => void open('users', item.id)}>View user</button>
+                </article>
+              )
+            )}
           </div>
           {list && (
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted">
                 Page {page} - {list.total} results
               </p>
