@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, ChevronDown } from 'lucide-react';
-import { Children, forwardRef, isValidElement, useCallback, useEffect, useRef, useState, type ComponentProps, type ReactElement } from 'react';
+import { Children, forwardRef, isValidElement, useCallback, useEffect, useId, useRef, useState, type ComponentProps, type ReactElement } from 'react';
 
 type Props = ComponentProps<'select'>;
 type Choice = { value: string; label: string; disabled: boolean };
@@ -30,6 +30,8 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
   forwardedRef,
 ) {
   const [open, setOpen] = useState(false);
+  const fallbackId = useId();
+  const listboxId = `${props.id ?? fallbackId}-options`;
   const [uncontrolled, setUncontrolled] = useState<string | undefined>(defaultValue === undefined ? undefined : String(defaultValue));
   const rootRef = useRef<HTMLDivElement>(null);
   const nativeRef = useRef<HTMLSelectElement | null>(null);
@@ -72,6 +74,7 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
     <div ref={rootRef} className="relative min-w-0">
       <select
         {...props}
+        id={props.id ? `${props.id}-native` : undefined}
         ref={(node) => { nativeRef.current = node; if (typeof forwardedRef === 'function') forwardedRef(node); else if (forwardedRef) forwardedRef.current = node; }}
         value={value}
         defaultValue={defaultValue}
@@ -86,13 +89,15 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
         {children}
       </select>
       <button
+        id={props.id}
+        role="combobox"
         ref={triggerRef}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={props['aria-label'] ?? (props.id ? undefined : 'Select an option')}
-        aria-controls={open ? `${props.id ?? 'app-select'}-options` : undefined}
+        aria-label={props['aria-label'] ?? 'Select an option'}
+        aria-controls={open ? listboxId : undefined}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); if (!open) setOpen(true); else move(event.key === 'ArrowDown' ? 1 : -1); }
@@ -104,7 +109,7 @@ export const AppSelect = forwardRef<HTMLSelectElement, Props>(function AppSelect
         <ChevronDown size={15} aria-hidden="true" className={`shrink-0 text-white/45 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div id={`${props.id ?? 'app-select'}-options`} role="listbox" aria-label={props['aria-label'] ?? 'Options'} className="absolute inset-x-0 top-[calc(100%+5px)] z-[100] max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#182320] p-1 shadow-2xl shadow-black/60">
+        <div id={listboxId} role="listbox" aria-label={props['aria-label'] ?? 'Options'} className="absolute inset-x-0 top-[calc(100%+5px)] z-[100] max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#182320] p-1 shadow-2xl shadow-black/60">
           {choices.map((choice) => (
             <button key={choice.value} type="button" role="option" aria-selected={choice.value === selectedValue} disabled={choice.disabled} onClick={() => choose(choice.value)} className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:bg-white/10 disabled:opacity-40 ${choice.value === selectedValue ? 'bg-primary/10 text-primary' : 'text-white/80'}`}>
               <span className="truncate">{choice.label}</span>
