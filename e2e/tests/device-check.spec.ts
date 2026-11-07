@@ -6,8 +6,11 @@ test('preferences survive the device-check step and going back', async ({ page, 
   await openDeviceCheck(page, { topic: 'Technology & AI', language: 'Urdu', formal: true });
   await expect(page.getByText(/Technology & AI.*Urdu.*Structured debate/i)).toBeVisible();
   await page.getByRole('button', { name: 'Back to preferences' }).click();
+  await expect(page.getByRole('heading', { name: 'What would you like to discuss?' })).toBeVisible();
   await expect(page.getByRole('radio', { name: 'Technology & AI' })).toBeChecked();
+  await page.getByRole('button', { name: /Continue/i }).click();
   await expect(page.getByRole('radio', { name: 'Urdu' })).toBeChecked();
+  await page.getByRole('button', { name: /Continue/i }).click();
   await expect(page.getByRole('radio', { name: /Structured debate/i })).toBeChecked();
 });
 

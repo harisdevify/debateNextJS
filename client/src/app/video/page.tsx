@@ -180,11 +180,11 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
       {/* PAGE */}
       <div className="relative flex flex-col min-h-[calc(100svh-56px)] bg-[#07090e] lg:h-[calc(100dvh-56px)] lg:overflow-hidden font-[DM_Sans,sans-serif]">
         {/* BODY */}
-        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
           {/* ── STAGE ── */}
           <section
-            className={`flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-3 transition-all duration-300 sm:p-4 lg:gap-3.5
-              ${chatOpen ? 'blur-sm brightness-50 pointer-events-none' : ''}`}
+            className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 p-3 transition-all duration-300 sm:p-4 lg:gap-3
+              ${chatOpen ? 'max-lg:blur-sm max-lg:brightness-50 max-lg:pointer-events-none' : ''}`}
           >
             <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-[#111b19] px-3 py-2 text-xs sm:px-4" aria-label="Debate preferences and connection">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5 text-white/70">
@@ -207,7 +207,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
               {partnerConnected && <span className="hidden text-xs text-white/45 sm:inline" aria-label="Video connection path">{connectionRoute === 'relay' ? 'TURN relay' : connectionRoute === 'direct' ? 'Direct connection' : 'Checking route'}</span>}
               <div className="ml-auto flex items-center gap-2">
                 <MicrophoneActivity stream={initialStream} enabled={micOn && partnerConnected} />
-                <details className="group relative text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>
+                <details className="group relative z-30 text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>
                   <summary className="flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-white/15 px-2.5 text-xs font-medium hover:bg-white/5">Devices</summary>
                   <div className="absolute right-0 top-full z-30 mt-2 w-[min(300px,calc(100vw-2rem))] space-y-3 rounded-xl border border-white/20 bg-[#111e1a] p-4 shadow-xl">
                     <label htmlFor="live-camera" className="block text-xs font-semibold text-white/70">Camera</label>
@@ -239,11 +239,11 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
             )}
             {/* VIDEO GRID */}
             <div
-              className="relative grid min-h-[min(54svh,520px)] min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(280px,1fr)_auto] gap-2 sm:min-h-[420px] sm:grid-cols-[minmax(0,1.65fr)_minmax(190px,0.75fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(200px,0.75fr)]"
+              className="relative grid min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(220px,1fr)_minmax(130px,0.45fr)] gap-2 sm:min-h-[360px] sm:grid-cols-[minmax(0,1.65fr)_minmax(170px,0.75fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(190px,0.75fr)]"
             >
               {/* Remote tile */}
               <div
-                className="relative min-h-[280px] overflow-hidden rounded-2xl bg-[#101b18]
+                className="relative min-h-[220px] overflow-hidden rounded-2xl bg-[#101b18]
                               border border-white/15 shadow-[0_18px_48px_rgba(0,0,0,0.4)]"
               >
                 <video
@@ -339,7 +339,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
 
               {/* Local tile — teal glow ring */}
               <div
-                className="relative min-h-[160px] overflow-hidden rounded-2xl bg-[#101b18]
+                className="relative min-h-[130px] overflow-hidden rounded-2xl bg-[#101b18]
                               border border-white/7
                               shadow-[inset_0_0_0_1px_rgba(0,217,189,0.2),0_18px_48px_rgba(0,0,0,0.4)]"
               >
@@ -365,7 +365,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
             {status === 'connected' && screenSharing && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm text-white/85" role="status">
                 <span>Your screen is being shared with your debate partner. Your camera preview stays visible to you.</span>
-                <button type="button" onClick={() => void stopScreenShare()} className="min-h-11 shrink-0 rounded-lg px-3 font-semibold text-primary hover:bg-primary/10">
+                <button type="button" onClick={() => void stopScreenShare()} className="min-h-9 shrink-0 rounded-lg px-2.5 font-semibold text-primary hover:bg-primary/10">
                   Stop sharing
                 </button>
               </div>
@@ -388,8 +388,8 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60
                   ${
                     micOn
-                      ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:scale-110 hover:bg-[rgba(0,153,255,0.55)] hover:border-transparent hover:shadow-[0_6px_24px_rgba(0,153,255,0.4)]'
-                      : 'bg-[rgba(255,59,92,0.1)] border-[rgba(255,59,92,0.28)] hover:scale-110 hover:bg-[rgba(255,59,92,0.4)] hover:shadow-[0_6px_24px_rgba(255,59,92,0.35)]'
+                      ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:bg-white/15'
+                      : 'bg-[rgba(255,59,92,0.1)] border-[rgba(255,59,92,0.28)] hover:bg-red-400/20'
                   }`}
               >
                 {micOn ? (
@@ -414,7 +414,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   min-w-11 min-h-11 focus-visible:ring-2 focus-visible:ring-primary/60
                   ${
                     camOn
-                      ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:scale-110 hover:bg-[rgba(0,153,255,0.55)] hover:border-transparent hover:shadow-[0_6px_24px_rgba(0,153,255,0.4)]'
+                      ? 'bg-white/7 border-white/11 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:brightness-110 hover:bg-[rgba(0,153,255,0.55)] hover:border-transparent hover:shadow-[0_6px_24px_rgba(0,153,255,0.4)]'
                       : 'bg-[rgba(255,59,92,0.1)] border-[rgba(255,59,92,0.28)] hover:scale-110 hover:bg-[rgba(255,59,92,0.4)] hover:shadow-[0_6px_24px_rgba(255,59,92,0.35)]'
                   }`}
               >
@@ -456,7 +456,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   flex items-center justify-center outline-none
                   bg-[#ff3b5c] shadow-[0_4px_22px_rgba(255,59,92,0.45)]
                   transition-all duration-200
-                  hover:scale-110 hover:bg-[#ff1a3a] hover:shadow-[0_8px_30px_rgba(255,59,92,0.6)]
+                  hover:bg-[#ed3151]
                   active:scale-[0.87]
                   min-w-12 min-h-12 focus-visible:ring-2 focus-visible:ring-white/70"
               >
@@ -498,7 +498,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
           </section>
 
           {/* ── DESKTOP CHAT ASIDE (hidden on mobile) ── */}
-          {partnerConnected && <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(30vw,345px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#101815] lg:flex">
+          {partnerConnected && <aside aria-label="Debate chat" className="hidden min-h-0 w-[min(30vw,330px)] min-w-[260px] shrink-0 flex-col border-l border-white/10 bg-[#101815] lg:flex">
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4.5 py-3.5 border-b border-white/7 shrink-0">
               <div className="live-dot w-2 h-2 rounded-full bg-[#00e5c0] shadow-[0_0_9px_rgba(0,229,192,0.7)]" />
