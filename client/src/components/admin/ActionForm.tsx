@@ -1,6 +1,7 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { Dialog } from '@/components/ui/Dialog';
+import { AppSelect } from '@/components/ui/AppSelect';
 import { actionLabels, type ActionKind } from './types';
 export interface ActionBody {
   action: ActionKind;
@@ -8,7 +9,7 @@ export interface ActionBody {
   durationHours?: number;
 }
 const field =
-  'min-h-12 w-full rounded-xl border border-border bg-background p-3 text-foreground focus-visible:outline-2 focus-visible:outline-primary';
+  'min-h-9 w-full rounded-lg border border-white/15 bg-[#0d1714] px-3 py-2 text-sm text-white focus-visible:border-primary';
 export function ActionForm({
   name,
   report,
@@ -60,15 +61,15 @@ export function ActionForm({
     }
   };
   return (
-    <section className="min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-      <h2 className="text-lg font-bold">Choose an action</h2>
-      <p className="mt-2 text-sm text-muted">
+    <section className="min-w-0 rounded-xl border border-white/10 bg-[#111b19] p-4 sm:p-5">
+      <h2 className="text-base font-semibold">Choose an action</h2>
+      <p className="mt-1 text-xs leading-5 text-white/50">
         Review the context first. A report alone is not proof of misconduct.
       </p>
       <form onSubmit={review} className="mt-5 space-y-4">
         <label className="block">
           <span className="mb-2 block text-sm font-semibold">Action</span>
-          <select
+          <AppSelect
             className={field}
             value={action}
             onChange={(e) => setAction(e.target.value as ActionKind)}
@@ -78,7 +79,7 @@ export function ActionForm({
                 {actionLabels[kind]}
               </option>
             ))}
-          </select>
+          </AppSelect>
         </label>
         {action === 'SUSPEND' && (
           <label className="block">
@@ -94,7 +95,7 @@ export function ActionForm({
               <option value={24}>24 hours</option>
               <option value={168}>7 days</option>
               <option value={720}>30 days</option>
-            </select>
+            </AppSelect>
           </label>
         )}
         <label className="block">
@@ -119,7 +120,7 @@ export function ActionForm({
         </label>
         <button
           disabled={reason.trim().length < 5 || busy}
-          className="min-h-11 rounded-full bg-primary px-5 py-2 font-semibold text-background disabled:opacity-40"
+          className="min-h-9 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-background disabled:opacity-40"
         >
           Review action
         </button>
@@ -157,14 +158,14 @@ export function ActionForm({
           <button
             disabled={busy}
             onClick={() => setConfirm(false)}
-            className="min-h-11 rounded-full border border-border px-5 disabled:opacity-40"
+            className="min-h-9 rounded-lg border border-white/15 px-4 text-sm disabled:opacity-40"
           >
             Cancel
           </button>
           <button
             disabled={busy || (action === 'BAN' && confirmationName.trim() !== name)}
             onClick={submit}
-            className={`min-h-11 rounded-xl px-5 font-semibold disabled:opacity-40 ${action === 'BAN' ? 'bg-red-600 text-white' : 'bg-primary text-background'}`}
+            className={`min-h-9 rounded-lg px-4 text-sm font-semibold disabled:opacity-40 ${action === 'BAN' ? 'bg-red-600 text-white' : 'bg-primary text-background'}`}
           >
             {busy ? 'Saving...' : 'Confirm action'}
           </button>
