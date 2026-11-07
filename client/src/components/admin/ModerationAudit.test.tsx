@@ -16,7 +16,8 @@ it('loads audit activity using admin-only API and filters kind', async () => {
   render(<ModerationAudit refresh={0} />);
   await screen.findByText('Repeated abuse');
   expect(screen.getByText('Admin A', { exact: false }).textContent).toContain('Member B');
-  fireEvent.change(screen.getByRole('combobox', { name: 'Filter audit action' }), { target: { value: 'SUSPEND' } });
+  fireEvent.click(screen.getByRole('combobox', { name: 'Filter audit action' }));
+  fireEvent.click(screen.getByRole('option', { name: /Suspend/i }));
   await waitFor(() => expect(mocks.get).toHaveBeenCalledWith('/admin/audit',
     expect.objectContaining({ params: { page: 1, kind: 'SUSPEND' } })));
 });
