@@ -65,6 +65,8 @@ model User {
   revokedTokens   RevokedToken[]
   historyAsFirst  DebateHistory[] @relation("HistoryFirstUser")
   historyAsSecond DebateHistory[] @relation("HistorySecondUser")
+  feedbackGiven DebateFeedback[] @relation("FeedbackRater")
+  feedbackReceived DebateFeedback[] @relation("FeedbackRecipient")
 
   @@map("debate_users")
 }
@@ -159,8 +161,28 @@ model DebateHistory {
   endReason    DebateEndReason @map("end_reason")
   firstUser    User            @relation("HistoryFirstUser", fields: [firstUserId], references: [id], onDelete: Cascade)
   secondUser   User            @relation("HistorySecondUser", fields: [secondUserId], references: [id], onDelete: Cascade)
+  feedbacks    DebateFeedback[]
 
   @@index([firstUserId, endedAt(sort: Desc)])
   @@index([secondUserId, endedAt(sort: Desc)])
   @@map("debate_history")
+}
+
+// Feedback is private: only the rater can view their own submitted rating.
+// Recipient is inferred server-side from the ended debate, never trusted from a request.
+model DebateFeedback {
+  id        Int      @id @default(autoincrement())
+  debateId  String   @map("debate_id") @db.Uuid
+  raterId   Int      @map("rater_id")
+  recipientId Int    @map("recipient_id")
+  rating    Int      @db.SmallInt
+  comment   String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  debate    DebateHistory @relation(fields: [debateId], references: [id], onDelete: Cascade)
+  rater     User @relation("FeedbackRater", fields: [raterId], references: [id], onDelete: Cascade)
+  recipient User @relation("FeedbackRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([debateId, raterId])
+  @@index([recipientId, createdAt])
+  @@map("debate_feedback")
 }
