@@ -1,5 +1,6 @@
 'use client';
 import { RotateCcw } from 'lucide-react';
+import './globals.css';
 
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return <html lang="en"><body className="flex min-h-screen items-center justify-center bg-[#070b0a] px-4 font-sans text-[#f5f7f6]">
