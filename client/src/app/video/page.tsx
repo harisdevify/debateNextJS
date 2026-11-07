@@ -99,6 +99,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     micOn,
     camOn,
     connectionQuality,
+    connectionRoute,
     availableDevices,
     selectedDeviceIds,
     switchingDevice,
@@ -172,6 +173,7 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 <span role="status" className={`text-xs font-semibold ${status !== 'connected' ? 'text-white/60' : connectionQuality === 'good' ? 'text-primary' : connectionQuality === 'poor' ? 'text-red-300' : connectionQuality === 'unstable' ? 'text-amber-300' : 'text-white/60'}`}>
                   {status !== 'connected' ? 'Media: waiting for connection' : connectionQuality === 'checking' ? 'Connection: measuring…' : `Connection: ${connectionQuality}`}
                 </span>
+                {status === 'connected' && <span className="text-xs text-white/55" role="status" aria-label="Video connection path">{connectionRoute === 'relay' ? 'Connection path: TURN relay' : connectionRoute === 'direct' ? 'Connection path: Direct peer' : 'Connection path: detecting…'}</span>}
                 <MicrophoneActivity stream={initialStream} enabled={micOn && status === 'connected'} />
               </div>
               <details className="group relative min-w-[150px] text-sm text-white/75" onToggle={(event) => { if (event.currentTarget.open) void refreshDevices(); }}>

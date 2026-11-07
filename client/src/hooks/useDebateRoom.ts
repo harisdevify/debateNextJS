@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import { createSocket } from "@/lib/socket";
 import { mediaEnvironmentError, mediaErrorMessage } from "@/lib/media-errors";
 import { analyzeInboundStats, type ConnectionQuality, type PacketSample } from "@/lib/connection-quality";
+import { detectConnectionRoute, type ConnectionRoute } from "@/lib/connection-route";
 import type { ChatMessage, DebateStatus, MatchedPayload, DebatePreferences, FormalDebateState } from "@/types";
 import { DEFAULT_DEBATE_PREFERENCES } from "@/lib/debate-preferences";
 import {
@@ -59,6 +60,7 @@ export function useDebateRoom(
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('checking');
+  const [connectionRoute, setConnectionRoute] = useState<ConnectionRoute>('checking');
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<{ audio: string; video: string }>({ audio: '', video: '' });
   const [switchingDevice, setSwitchingDevice] = useState(false);
@@ -88,6 +90,7 @@ export function useDebateRoom(
     }
     iceRef.current = [];
     setConnectionQuality('checking');
+    setConnectionRoute('checking');
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, [remoteVideoRef]);
   useEffect(() => {
@@ -110,6 +113,7 @@ export function useDebateRoom(
         const result = analyzeInboundStats(report, previous);
         previous = result.next;
         setConnectionQuality(result.quality);
+        setConnectionRoute(detectConnectionRoute(report));
       } catch {
         if (!cancelled) setConnectionQuality('checking');
       }
@@ -304,6 +308,21 @@ export function useDebateRoom(
         setMessages([]);
         setPeerName(peer?.fullname || "");
         setStatus("connecting");
+        // Credentials may expire during a long wait or a formal reconnect.
+        // Refresh right before constructing each new peer connection.
+        try {
+          const response = await api.get<RTCConfiguration>("/auth/ice-servers", { silent: true });
+          if (cancelled || matchRef.current !== matchId) return;
+          configRef.current = response.data;
+        } catch {
+          if (cancelled || matchRef.current !== matchId) return;
+          socket.emit("leave");
+          closePeer();
+          setStatus("error");
+          toast.error("Could not refresh video relay settings. Check your connection and retry.");
+          return;
+        }
+        if (cancelled || matchRef.current !== matchId) return;
         const pc = new RTCPeerConnection(configRef.current);
         peerRef.current = pc;
         const local = streamRef.current;
@@ -748,6 +767,7 @@ export function useDebateRoom(
     micOn,
     camOn,
     connectionQuality,
+    connectionRoute,
     availableDevices,
     selectedDeviceIds,
     switchingDevice,
