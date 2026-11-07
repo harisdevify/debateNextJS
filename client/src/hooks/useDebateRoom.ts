@@ -740,7 +740,6 @@ export function useDebateRoom(
     if (track) track.onended = null;
     display.getTracks().forEach((item) => item.stop());
     setScreenSharing(false);
-    const pc = peerRef.current;
     const sender = displaySenderRef.current;
     displaySenderRef.current = null;
     const camera = streamRef.current?.getVideoTracks()[0];
