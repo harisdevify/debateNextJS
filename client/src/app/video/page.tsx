@@ -18,6 +18,8 @@ import {
   Mic,
   MicOff,
   PhoneOff,
+  MonitorUp,
+  MonitorOff,
   UserX,
   Video,
   VideoOff,
@@ -99,6 +101,11 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     blockPartner,
     toggleMic,
     toggleCamera,
+    startScreenShare,
+    stopScreenShare,
+    screenSharing,
+    peerScreenSharing,
+    screenShareBusy,
     micOn,
     camOn,
     connectionQuality,
@@ -229,9 +236,14 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                   ref={remoteRef}
                   autoPlay
                   playsInline
-                  className="absolute inset-0 block h-full w-full object-cover"
+                  className={`absolute inset-0 block h-full w-full ${peerScreenSharing ? 'object-contain' : 'object-cover'}`}
                   style={{ background: PLACEHOLDER }}
                 />
+                {status === 'connected' && peerScreenSharing && (
+                  <span className="absolute bottom-3 left-3 rounded-lg border border-primary/30 bg-[#07130f]/90 px-3 py-1.5 text-xs font-semibold text-primary" role="status">
+                    Partner is sharing their screen
+                  </span>
+                )}
                 {/* gloss overlay */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" />
 
@@ -325,6 +337,14 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
               </div>
             </div>
 
+            {status === 'connected' && screenSharing && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm text-white/85" role="status">
+                <span>Your screen is being shared with your debate partner. Your camera preview stays visible to you.</span>
+                <button type="button" onClick={() => void stopScreenShare()} className="min-h-11 shrink-0 rounded-lg px-3 font-semibold text-primary hover:bg-primary/10">
+                  Stop sharing
+                </button>
+              </div>
+            )}
             {/* CONTROLS */}
             <div className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#111b19] px-4 py-3 shadow-[0_12px_35px_rgba(0,0,0,.28)]">
               {/* Mic */}
@@ -378,6 +398,20 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 ) : (
                   <VideoOff size={19} color="#ff7070" />
                 )}
+              </button>
+
+              {/* Screen sharing uses the existing video stream; camera returns on stop. */}
+              <button
+                type="button"
+                onClick={() => { if (screenSharing) void stopScreenShare(); else void startScreenShare(); }}
+                disabled={status !== 'connected' || screenShareBusy ||
+                  (!screenSharing && typeof navigator !== 'undefined' && !navigator.mediaDevices?.getDisplayMedia)}
+                aria-label={screenSharing ? 'Stop screen sharing' : 'Share screen'}
+                aria-pressed={screenSharing}
+                title={screenSharing ? 'Stop screen sharing' : 'Share your screen'}
+                className={`relative flex size-[52px] min-h-11 min-w-11 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40 ${screenSharing ? 'border-primary bg-primary/15 text-primary' : 'border-white/15 bg-white/7 text-white hover:bg-white/15'}`}
+              >
+                {screenSharing ? <MonitorOff size={19} aria-hidden="true" /> : <MonitorUp size={19} aria-hidden="true" />}
               </button>
 
               {/* End Call */}

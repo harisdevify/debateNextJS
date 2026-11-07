@@ -299,6 +299,18 @@ export class RealtimeGateway
       (value: unknown, ack?: unknown) => void this.chat(client, value, ack),
     );
     client.on('caption', (value: unknown) => void this.forwardCaption(client, value));
+    // This is a state notification only; screen media stays end-to-end in WebRTC.
+    // Relay solely between active, symmetrically matched participants.
+    client.on('screen-share-state', (payload: unknown) => {
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
+      const body = payload as Record<string, unknown>;
+      const matchId = client.data.matchId;
+      const peerId = client.data.peerId;
+      if (!matchId || body.matchId !== matchId || typeof body.active !== 'boolean' || !peerId) return;
+      const peer = this.server.sockets.sockets.get(peerId) as DebateSocket | undefined;
+      if (!peer || !peer.connected || peer.data.peerId !== client.id || peer.data.matchId !== matchId) return;
+      peer.emit('screen-share-state', { matchId, active: body.active });
+    });
     client.on("leave", () => this.leaveDebate(client));
   }
 

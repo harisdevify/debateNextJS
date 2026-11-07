@@ -325,3 +325,68 @@ it("does not create a peer or reuse stale TURN settings when credentials fail to
   expect(mocks.emit).toHaveBeenCalledWith('leave');
   expect(result.current.status).toBe('error');
 });
+
+it("shares the display with the matched peer and restores the existing camera on stop", async () => {
+  const camera = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null };
+  const audio = { kind: "audio", enabled: true, readyState: "live", stop: vi.fn(), onended: null };
+  const stream = { getTracks: () => [camera, audio], getVideoTracks: () => [camera], getAudioTracks: () => [audio] };
+  const screen = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null };
+  const display = { getTracks: () => [screen], getVideoTracks: () => [screen] };
+  const getDisplayMedia = vi.fn(async () => display);
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: vi.fn(async () => stream), getDisplayMedia,
+  } });
+  const { result, unmount } = await setup();
+  await fire("matched", { matchId: "share-one", initiator: false });
+  const pc = Peer.instances[0];
+  const replaceTrack = vi.fn(async () => {});
+  Object.assign(pc, { getSenders: () => [{ track: camera, replaceTrack }] });
+  act(() => { pc.connectionState = 'connected'; pc.onconnectionstatechange?.(); });
+  await act(async () => { expect(await result.current.startScreenShare()).toBe(true); });
+  expect(getDisplayMedia).toHaveBeenCalledWith({ video: true, audio: false });
+  expect(replaceTrack).toHaveBeenCalledWith(screen);
+  expect(result.current.screenSharing).toBe(true);
+  expect(mocks.emit).toHaveBeenCalledWith('screen-share-state', { matchId: 'share-one', active: true });
+  expect(camera.stop).not.toHaveBeenCalled();
+  await act(async () => { await result.current.stopScreenShare(); });
+  expect(replaceTrack).toHaveBeenLastCalledWith(camera);
+  expect(screen.stop).toHaveBeenCalled();
+  expect(camera.stop).not.toHaveBeenCalled();
+  expect(result.current.screenSharing).toBe(false);
+  expect(mocks.emit).toHaveBeenCalledWith('screen-share-state', { matchId: 'share-one', active: false });
+  unmount();
+});
+
+it("ends desktop capture on match leave and ignores stale partner screen state", async () => {
+  const camera = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null };
+  const screen = { kind: "video", enabled: true, readyState: "live", stop: vi.fn(), onended: null };
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: vi.fn(async () => ({ getTracks: () => [camera], getVideoTracks: () => [camera], getAudioTracks: () => [] })),
+    getDisplayMedia: vi.fn(async () => ({ getTracks: () => [screen], getVideoTracks: () => [screen] })),
+  } });
+  const { result, unmount } = await setup();
+  await fire("matched", { matchId: "share-two", initiator: false });
+  const pc = Peer.instances[0];
+  Object.assign(pc, { getSenders: () => [{ track: camera, replaceTrack: vi.fn(async () => {}) }] });
+  act(() => { pc.connectionState = 'connected'; pc.onconnectionstatechange?.(); });
+  await act(async () => { await result.current.startScreenShare(); });
+  await fire("screen-share-state", { matchId: "share-two", active: true });
+  expect(result.current.peerScreenSharing).toBe(true);
+  await fire("screen-share-state", { matchId: "old-match", active: false });
+  expect(result.current.peerScreenSharing).toBe(true);
+  await act(async () => { result.current.cancelSearch(); });
+  expect(screen.stop).toHaveBeenCalledOnce();
+  expect(result.current.screenSharing).toBe(false);
+  expect(result.current.peerScreenSharing).toBe(false);
+  unmount();
+});
+
+it("does not start capture when browser display sharing is unsupported", async () => {
+  const { result, unmount } = await setup();
+  await fire("matched", { matchId: "unsupported", initiator: false });
+  const pc = Peer.instances[0];
+  act(() => { pc.connectionState = 'connected'; pc.onconnectionstatechange?.(); });
+  await act(async () => { expect(await result.current.startScreenShare()).toBe(false); });
+  expect(result.current.screenSharing).toBe(false);
+  unmount();
+});
