@@ -47,7 +47,7 @@ export function DebateSetup({ initial = DEFAULT_DEBATE_PREFERENCES, onStart }: P
         <ol className="mt-3 grid grid-cols-4 gap-1.5" aria-label="Conversation setup progress">
           {['Topic', 'Language', 'Style', 'Devices'].map((label, index) => (
             <li key={label} aria-current={index === step ? 'step' : undefined} className="min-w-0">
-              <div className={`h-1.5 rounded-full ${index <= step ? 'bg-primary' : 'bg-white/15'}`} />
+              <div className={`h-1.5 rounded-full transition-colors duration-200 motion-reduce:transition-none ${index <= step ? 'bg-primary' : 'bg-white/15'}`} />
               <span className={`mt-2 hidden text-[11px] sm:block ${index === step ? 'font-semibold text-white' : 'text-white/40'}`}>
                 {index < step ? '✓ ' : ''}{label}
               </span>
@@ -57,7 +57,7 @@ export function DebateSetup({ initial = DEFAULT_DEBATE_PREFERENCES, onStart }: P
       </header>
 
       <form onSubmit={next} className="rounded-2xl border border-white/12 bg-[#111e1a] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:p-7">
-        <div aria-live="polite" aria-atomic="true">
+        <div key={step} className="step-reveal min-h-[19rem] sm:min-h-[15rem]" aria-live="polite" aria-atomic="true">
           <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{current.heading}</h1>
           <p className="mt-2 max-w-lg text-sm leading-6 text-white/55">{current.description}</p>
         </div>
@@ -83,6 +83,7 @@ export function DebateSetup({ initial = DEFAULT_DEBATE_PREFERENCES, onStart }: P
             ))}
           </div>
         </fieldset>
+        </div>
 
         <div className="mt-7 flex items-center justify-between gap-3 border-t border-white/10 pt-5">
           {step > 0 ? (
