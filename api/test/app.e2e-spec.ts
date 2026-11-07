@@ -551,6 +551,43 @@ describe("Debate API (e2e)", () => {
       await blockedSecond;
     });
 
+    it("relays ephemeral captions only to the current matched peer", async () => {
+      const a = await connect((await loginAs()).cookie);
+      const b = await connect((await loginAs()).cookie);
+      const outsider = await connect((await loginAs()).cookie);
+      const waiting = once(a, "waiting");
+      a.emit("find-partner");
+      await waiting;
+      const matchedA = once<{ matchId: string }>(a, "matched");
+      const matchedB = once(b, "matched");
+      b.emit("find-partner");
+      const [{ matchId }] = await Promise.all([matchedA, matchedB]);
+
+      const unexpected: unknown[] = [];
+      outsider.on('caption', (value) => unexpected.push(value));
+      const received = once<{ matchId: string; text: string }>(b, 'caption');
+      a.emit('caption', { matchId, text: '  Assalamu alaikum  ' });
+      expect(await received).toEqual({ matchId, text: 'Assalamu alaikum' });
+
+      let extra = 0;
+      b.on('caption', () => extra++);
+      a.emit('caption', { matchId: 'stale-match', text: 'stale' });
+      a.emit('caption', { matchId, text: 'x'.repeat(241) });
+      a.emit('caption', { matchId, text: '' });
+      outsider.emit('caption', { matchId, text: 'intruder' });
+      await new Promise((resolve) => setTimeout(resolve, 140));
+      expect(extra).toBe(0);
+      expect(unexpected).toHaveLength(0);
+
+      const left = once(b, 'peer-left');
+      a.emit('leave');
+      await left;
+      a.emit('caption', { matchId, text: 'after leave' });
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(extra).toBe(0);
+      expect(unexpected).toHaveLength(0);
+    });
+
     it("matches two users, relays signaling + chat only to the partner", async () => {
       const [u1, u2, u3] = [await loginAs(), await loginAs(), await loginAs()];
       const a = await connect(u1.cookie);
