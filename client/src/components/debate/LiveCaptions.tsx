@@ -46,14 +46,13 @@ export function LiveCaptions({
   onCaption: (text: string) => void;
 }) {
   const [enabled, setEnabled] = useState(false);
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [supported] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const browser = window as RecognitionWindow;
+    return Boolean(browser.SpeechRecognition || browser.webkitSpeechRecognition);
+  });
   const [localText, setLocalText] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const browser = window as RecognitionWindow;
-    setSupported(Boolean(browser.SpeechRecognition || browser.webkitSpeechRecognition));
-  }, []);
 
   const active = enabled && status === 'connected' && micOn && maySpeak && supported;
   useEffect(() => {
@@ -112,8 +111,11 @@ export function LiveCaptions({
     try {
       recognition.start();
     } catch {
-      setError('Could not start speech recognition in this browser.');
-      setEnabled(false);
+      queueMicrotask(() => {
+        if (disposed) return;
+        setError('Could not start speech recognition in this browser.');
+        setEnabled(false);
+      });
     }
     return () => {
       disposed = true;
