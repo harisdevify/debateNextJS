@@ -23,6 +23,8 @@ export function configureApp(app: INestApplication) {
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());
   app.use(helmet());
+  // Avoid disclosing framework details to automated reconnaissance.
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.enableCors({
     origin: config.get<string>('CLIENT_URL') ?? 'http://localhost:3000',
     credentials: true,

@@ -38,7 +38,9 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: production,
-      sameSite: production ? ('none' as const) : ('lax' as const),
+      // HTTP auth is proxied through the frontend origin; cross-site cookies
+      // increase CSRF exposure without improving the supported deployment.
+      sameSite: 'lax' as const,
     };
   }
 
