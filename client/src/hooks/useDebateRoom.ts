@@ -61,6 +61,11 @@ export function useDebateRoom(
   const captionClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [peerScreenSharing, setPeerScreenSharing] = useState(false);
+  const [screenShareBusy, setScreenShareBusy] = useState(false);
+  const displayRef = useRef<MediaStream | null>(null);
+  const displayBusyRef = useRef(false);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('checking');
   const [connectionRoute, setConnectionRoute] = useState<ConnectionRoute>('checking');
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
@@ -77,6 +82,19 @@ export function useDebateRoom(
     }
   }, []);
   const closePeer = useCallback(() => {
+    // Never leave desktop capture running after a match ends or changes.
+    if (displayRef.current) {
+      const display = displayRef.current;
+      displayRef.current = null;
+      display.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+    }
+    displayBusyRef.current = false;
+    setScreenSharing(false);
+    setScreenShareBusy(false);
+    setPeerScreenSharing(false);
     if (captionClearRef.current) clearTimeout(captionClearRef.current);
     captionClearRef.current = null;
     setPeerCaption("");
@@ -454,6 +472,10 @@ export function useDebateRoom(
       setStatus("peer-left");
       toast.info("Your partner left the debate.");
     });
+    socket.on('screen-share-state', ({ matchId, active }: { matchId: string; active: boolean }) => {
+      if (cancelled || !matchRef.current || matchId !== matchRef.current || typeof active !== 'boolean') return;
+      setPeerScreenSharing(active);
+    });
     socket.on('caption', ({ matchId, text }: { matchId: string; text: string }) => {
       if (cancelled || !matchRef.current || matchRef.current !== matchId ||
           typeof text !== 'string' || !text.trim()) return;
@@ -705,6 +727,89 @@ export function useDebateRoom(
     },
     [status, emitWithAck],
   );
+  const stopScreenShare = useCallback(async () => {
+    const display = displayRef.current;
+    if (!display) return;
+    displayRef.current = null;
+    // Stop capture immediately even if the connection disappeared.
+    const track = display.getVideoTracks()[0];
+    if (track) track.onended = null;
+    display.getTracks().forEach((item) => item.stop());
+    setScreenSharing(false);
+    const pc = peerRef.current;
+    const sender = pc?.getSenders?.().find((item) => item.track?.kind === 'video' && item.track === track);
+    const camera = streamRef.current?.getVideoTracks()[0];
+    try {
+      if (sender && camera && camera.readyState === 'live') {
+        await sender.replaceTrack(camera);
+      }
+    } catch {
+      // If camera restoration fails, end this peer rather than leaving a blank feed.
+      socketRef.current?.emit('leave');
+      closePeer();
+      setStatus('error');
+      toast.error('Could not restore your camera. Please reconnect to a partner.');
+      return;
+    } finally {
+      if (displayRef.current === null) displayBusyRef.current = false;
+      setScreenShareBusy(false);
+    }
+    const id = matchRef.current;
+    if (id && socketRef.current?.connected) {
+      socketRef.current.emit('screen-share-state', { matchId: id, active: false });
+    }
+  }, [closePeer]);
+
+  const startScreenShare = useCallback(async () => {
+    const pc = peerRef.current;
+    const id = matchRef.current;
+    if (displayBusyRef.current || displayRef.current || !pc || !id ||
+        pc.connectionState !== 'connected') return false;
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      toast.error('Screen sharing is not supported in this browser.');
+      return false;
+    }
+    const sender = pc.getSenders?.().find((item) => item.track?.kind === 'video');
+    if (!sender) {
+      toast.error('Your camera must be available before screen sharing.');
+      return false;
+    }
+    displayBusyRef.current = true;
+    setScreenShareBusy(true);
+    let captured: MediaStream | null = null;
+    try {
+      // This must run directly from the user click for browser permission.
+      captured = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const track = captured.getVideoTracks()[0];
+      if (!track || track.readyState !== 'live') throw new Error('No active display track');
+      if (peerRef.current !== pc || matchRef.current !== id || pc.connectionState !== 'connected') {
+        captured.getTracks().forEach((item) => item.stop());
+        return false;
+      }
+      await sender.replaceTrack(track);
+      if (peerRef.current !== pc || matchRef.current !== id) {
+        await sender.replaceTrack(streamRef.current?.getVideoTracks()[0] ?? null).catch(() => undefined);
+        captured.getTracks().forEach((item) => item.stop());
+        return false;
+      }
+      displayRef.current = captured;
+      track.onended = () => { void stopScreenShare(); };
+      setScreenSharing(true);
+      socketRef.current?.emit('screen-share-state', { matchId: id, active: true });
+      return true;
+    } catch (error) {
+      captured?.getTracks().forEach((item) => item.stop());
+      if ((error as { name?: string })?.name !== 'NotAllowedError' &&
+          (error as { name?: string })?.name !== 'AbortError') {
+        toast.error('Screen sharing could not start. Choose a screen or try another browser.');
+      }
+      return false;
+    } finally {
+      displayBusyRef.current = false;
+      setScreenShareBusy(false);
+    }
+  }, [stopScreenShare]);
+
   const switchDevice = useCallback(async (kind: 'audio' | 'video', deviceId: string): Promise<boolean> => {
     const current = streamRef.current;
     if (!current || !navigator.mediaDevices?.getUserMedia || mediaSwitchRef.current) return false;
@@ -724,7 +829,11 @@ export function useDebateRoom(
         return false;
       }
       const pc = peerRef.current;
-      const sender = pc?.getSenders?.().find(item => item.track === oldTrack);
+      // During screen sharing the video sender has a display track; update
+    // the camera preview only, and restore the newly selected camera later.
+    const sender = kind === 'video' && displayRef.current
+      ? undefined
+      : pc?.getSenders?.().find(item => item.track === oldTrack);
       // Preserve formal-debate turn enforcement, user mute and camera state.
       replacement.enabled = kind === 'audio'
         ? maySpeakRef.current && micWantedRef.current
@@ -790,6 +899,11 @@ export function useDebateRoom(
     blockPartner,
     toggleMic,
     toggleCamera,
+    startScreenShare,
+    stopScreenShare,
+    screenSharing,
+    peerScreenSharing,
+    screenShareBusy,
     micOn,
     camOn,
     connectionQuality,
