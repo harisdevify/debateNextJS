@@ -1,6 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
-import { Menu, X } from 'lucide-react';
+import { AlertTriangle, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -18,6 +18,8 @@ export default function Header() {
   const { user, logout, loading, verificationError } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // The active debate page already provides the debate flow and its controls.
+  const isDebatePage = pathname === '/video' || pathname.startsWith('/video/');
 
   // Close sidebar on route change
   useEffect(() => {
@@ -53,11 +55,11 @@ export default function Header() {
   };
 
   const navLinkClass = (href: string) =>
-    `nav-link pressable min-h-10 inline-flex items-center rounded-lg px-3 py-2 text-[0.9rem] transition-colors duration-200 hover:text-primary
+    `nav-link pressable min-h-9 inline-flex items-center rounded-lg px-2.5 py-1.5 text-[0.875rem] transition-colors duration-200 hover:text-primary
      ${pathname === href ? 'active text-primary font-semibold' : 'text-white/80'}`;
 
   const sidebarLinkClass = (href: string) =>
-    `flex items-center gap-3 px-4 py-3 rounded-xl text-[1rem] font-medium transition-all duration-200
+    `flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-xl text-[0.95rem] font-medium transition-all duration-200
      ${
        pathname === href
          ? 'bg-primary/15 text-primary border border-primary/30'
@@ -74,7 +76,7 @@ export default function Header() {
       ? [
           { href: '/profile', label: 'Profile' },
           { href: '/history', label: 'History' },
-          { href: '/video', label: 'Debate' },
+          ...(!isDebatePage ? [{ href: '/video', label: 'Debate' }] : []),
         ]
       : [
           { href: '/register', label: 'Sign Up' },
@@ -86,7 +88,7 @@ export default function Header() {
     <>
       {/* ── Top bar: glass + hairline border ── */}
       <header className="glass sticky top-0 z-50 border-b border-white/10">
-        <div className="max-container flex h-16 items-center justify-between gap-6">
+        <div className="max-container flex h-14 items-center justify-between gap-4">
           {/* Logo */}
           <Link
             href="/"
@@ -103,9 +105,9 @@ export default function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-0.5 md:flex">
             {navLinks.map(({ href, label }) => (
-              <Link key={href} href={href} className={href === '/video' ? 'ml-2 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-bold text-background transition-colors hover:bg-primary-hover' : navLinkClass(href)}>
+              <Link key={href} href={href} className={href === '/video' ? 'ml-2 inline-flex min-h-9 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-background transition-colors hover:bg-primary-hover' : navLinkClass(href)}>
                 {label}
               </Link>
             ))}
@@ -114,7 +116,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="pressable ml-1 min-h-10 rounded-lg border border-white/10 px-4 py-2 text-[0.9rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
+                className="pressable ml-1 min-h-9 rounded-lg border border-white/10 px-3 py-1.5 text-[0.875rem] text-white/70 transition-all duration-200 hover:border-red-400/30 hover:text-red-300"
               >
                 Logout
               </button>
@@ -134,7 +136,19 @@ export default function Header() {
         </div>
       </header>
 
-      {user?.lastWarningAt && <div role="status" className="border-b border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center text-sm text-foreground">You have a conduct warning dated {new Date(user.lastWarningAt).toLocaleDateString()}. <Link href="/rules" className="font-semibold underline">Review debate rules</Link>.</div>}
+      {user?.lastWarningAt && (
+        <div role="status" className="border-b border-amber-400/20 bg-amber-400/[0.07]">
+          <div className="max-container flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 text-sm">
+            <AlertTriangle size={16} className="shrink-0 text-amber-300" aria-hidden="true" />
+            <span className="min-w-0 flex-1 text-amber-100/85">
+              Conduct warning · {new Date(user.lastWarningAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            </span>
+            <Link href="/rules" className="inline-flex min-h-9 items-center rounded-md px-2 font-semibold text-amber-200 underline underline-offset-4 hover:text-amber-100">
+              Review debate rules
+            </Link>
+          </div>
+        </div>
+      )}
       {/* ── Mobile Sidebar ── */}
 
       {/* Backdrop */}
@@ -186,14 +200,14 @@ export default function Header() {
           ) : user ? (
             <button
               onClick={handleLogout}
-              className="pressable mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 font-medium text-red-400 transition-colors hover:bg-red-400/20 hover:text-red-300"
+              className="pressable mb-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2.5 font-medium text-red-400 transition-colors hover:bg-red-400/20 hover:text-red-300"
             >
               Logout
             </button>
           ) : (
             <Link
               href="/login"
-              className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-[#06231e] transition-colors hover:bg-primary-hover"
+              className="pressable flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 font-bold text-[#06231e] transition-colors hover:bg-primary-hover"
             >
               Login
             </Link>
