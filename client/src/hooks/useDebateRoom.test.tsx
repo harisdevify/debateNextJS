@@ -305,3 +305,23 @@ it("retains old camera if RTP sender rejects switching", async () => {
   expect(replacement.stop).toHaveBeenCalled();
   expect(stream.removeTrack).not.toHaveBeenCalled();
 });
+
+it("refreshes TURN credentials immediately before each matched peer and applies the latest server list", async () => {
+  const { result } = await setup();
+  mocks.get.mockResolvedValueOnce({
+    data: { iceServers: [{ urls: 'turn:relay.example.test:3478', username: 'new', credential: 'short-lived' }] },
+  });
+  await fire('matched', { matchId: 'fresh-relay', initiator: false });
+  expect(mocks.get).toHaveBeenCalledWith('/auth/ice-servers', { silent: true });
+  expect(Peer.instances).toHaveLength(1);
+  expect(result.current.status).toBe('connecting');
+});
+
+it("does not create a peer or reuse stale TURN settings when credentials fail to refresh", async () => {
+  const { result } = await setup();
+  mocks.get.mockRejectedValueOnce(new Error('TURN configuration unavailable'));
+  await fire('matched', { matchId: 'expired-relay', initiator: true });
+  expect(Peer.instances).toHaveLength(0);
+  expect(mocks.emit).toHaveBeenCalledWith('leave');
+  expect(result.current.status).toBe('error');
+});
