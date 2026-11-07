@@ -15,8 +15,32 @@ export function validateEnv(config: Record<string, unknown>) {
     errors.push(`JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters`);
   }
 
-  if (config.PORT !== undefined && Number.isNaN(Number(config.PORT))) {
-    errors.push('PORT must be a number');
+  if (config.PORT !== undefined &&
+    (!Number.isSafeInteger(Number(config.PORT)) || Number(config.PORT) < 1 || Number(config.PORT) > 65535)) {
+    errors.push('PORT must be an integer from 1 to 65535');
+  }
+
+  const production = config.NODE_ENV === 'production';
+  const clientUrl = String(config.CLIENT_URL ?? '').trim();
+  if (clientUrl) {
+    try {
+      const parsed = new URL(clientUrl);
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username ||
+          parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/' ||
+          parsed.origin !== clientUrl) {
+        errors.push('CLIENT_URL must be a single HTTP(S) origin without a path or credentials');
+      }
+      if (production && parsed.protocol !== 'https:') {
+        errors.push('CLIENT_URL must use HTTPS in production');
+      }
+    } catch {
+      errors.push('CLIENT_URL must be a valid HTTP(S) origin');
+    }
+  } else if (production) {
+    errors.push('CLIENT_URL is required in production');
+  }
+  if (production && /(replace|example|change-me|local|test-only|ci-only)/i.test(jwtSecret)) {
+    errors.push('JWT_SECRET must be a unique production secret, not a placeholder');
   }
 
   const turnUrls = String(config.TURN_URLS ?? '').trim();

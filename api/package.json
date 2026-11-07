@@ -18,7 +18,9 @@
     "prisma:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json --runInBand",
-    "test:unit": "prisma generate && jest --config ./test/jest-unit.json --runInBand"
+    "test:unit": "prisma generate && jest --config ./test/jest-unit.json --runInBand",
+    "test:preflight": "node --test scripts/production-preflight.test.mjs",
+    "preflight:prod": "node scripts/production-preflight.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

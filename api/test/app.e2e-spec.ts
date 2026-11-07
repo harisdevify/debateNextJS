@@ -162,6 +162,10 @@ describe("Debate API (e2e)", () => {
     it("GET /health", async () => {
       const res = await http.get("/api/v1/health").expect(200);
       expect(res.body).toEqual({ status: "ok", service: "debate-api" });
+      expect(res.headers['x-powered-by']).toBeUndefined();
+      const ready = await http.get("/api/v1/health/ready").expect(200);
+      expect(ready.body).toEqual({ status: "ready", service: "debate-api" });
+      expect(ready.headers['x-powered-by']).toBeUndefined();
     });
 
     it("register: one readable message per validation error", async () => {
@@ -227,6 +231,7 @@ describe("Debate API (e2e)", () => {
       const cookie = (ok.headers["set-cookie"] as unknown as string[])[0];
       expect(cookie).toMatch(/^accessToken=/);
       expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/SameSite=Lax/i);
 
       const empty = await http.post("/api/v1/auth/login").expect(400);
       expect(empty.body.message).toBe("Email and password are required!");
