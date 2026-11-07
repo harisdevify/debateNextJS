@@ -67,9 +67,10 @@ export function ActionForm({
         Review the context first. A report alone is not proof of misconduct.
       </p>
       <form onSubmit={review} className="mt-5 space-y-4">
-        <label className="block">
+        <div className="block">
           <span className="mb-2 block text-sm font-semibold">Action</span>
           <AppSelect
+            aria-label="Action"
             className={field}
             value={action}
             onChange={(e) => setAction(e.target.value as ActionKind)}
@@ -80,13 +81,14 @@ export function ActionForm({
               </option>
             ))}
           </AppSelect>
-        </label>
+        </div>
         {action === 'SUSPEND' && (
-          <label className="block">
+          <div className="block">
             <span className="mb-2 block text-sm font-semibold">
               Suspend for
             </span>
-            <select
+            <AppSelect
+              aria-label="Suspend for"
               className={field}
               value={hours}
               onChange={(e) => setHours(Number(e.target.value))}
@@ -96,7 +98,7 @@ export function ActionForm({
               <option value={168}>7 days</option>
               <option value={720}>30 days</option>
             </AppSelect>
-          </label>
+          </div>
         )}
         <label className="block">
           <span className="mb-2 block text-sm font-semibold">
