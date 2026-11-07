@@ -60,7 +60,6 @@ export function DebateSetup({ initial = DEFAULT_DEBATE_PREFERENCES, onStart }: P
         <div key={step} className="step-reveal min-h-[19rem] sm:min-h-[15rem]" aria-live="polite" aria-atomic="true">
           <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{current.heading}</h1>
           <p className="mt-2 max-w-lg text-sm leading-6 text-white/55">{current.description}</p>
-        </div>
 
         <fieldset className="mt-6">
           <legend className="sr-only">{current.label}</legend>
