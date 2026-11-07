@@ -24,7 +24,8 @@ it('requires review and confirmation before applying an action', async () => {
   render(
     <ActionForm name="Member" report restricted={false} onSubmit={submit} />
   );
-  await user.selectOptions(screen.getByLabelText('Action'), 'SUSPEND');
+  await user.click(screen.getByRole('combobox', { name: 'Action' }));
+  await user.click(screen.getByRole('option', { name: 'Suspend' }));
   await user.type(
     screen.getByLabelText('Internal reason'),
     'Reviewed repeated harassment'
@@ -51,10 +52,9 @@ it('does not offer account restrictions when only dismiss is permitted', () => {
       onSubmit={vi.fn()}
     />
   );
+  expect(screen.getByRole('combobox', { name: 'Action' }).textContent).toContain('Dismiss');
+  fireEvent.click(screen.getByRole('combobox', { name: 'Action' }));
   expect(screen.getAllByRole('option')).toHaveLength(1);
-  expect((screen.getByLabelText('Action') as HTMLSelectElement).value).toBe(
-    'DISMISS'
-  );
 });
 it('keeps the reason after a failed save', async () => {
   const user = userEvent.setup();
@@ -89,7 +89,8 @@ it('requires exact name confirmation for ban', async () => {
   const user = userEvent.setup();
   const submit = vi.fn().mockResolvedValue(true);
   render(<ActionForm name="Member One" report={false} restricted={false} onSubmit={submit} />);
-  await user.selectOptions(screen.getByLabelText('Action'), 'BAN');
+  await user.click(screen.getByRole('combobox', { name: 'Action' }));
+  await user.click(screen.getByRole('option', { name: 'Ban' }));
   await user.type(screen.getByLabelText('Internal reason'), 'Repeated serious harassment');
   await user.click(screen.getByRole('button', { name: 'Review action' }));
   const confirm = screen.getByRole('button', { name: 'Confirm action' });
