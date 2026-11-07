@@ -6,7 +6,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
     <main className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111b19] p-8 text-center">
       <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-xl border border-[#00d9bd]/25 bg-[#00d9bd]/10 text-[#00d9bd]"><RotateCcw size={23} /></div>
       <h1 className="text-xl font-semibold">We hit an unexpected error</h1>
-      <p className="mt-2 text-sm leading-6 text-white/60">The application couldn't recover automatically. Please try again.</p>
+      <p className="mt-2 text-sm leading-6 text-white/60">The application could not recover automatically. Please try again.</p>
       <button type="button" onClick={() => reset()} className="mt-6 inline-flex min-h-10 items-center justify-center rounded-lg bg-[#00d9bd] px-5 text-sm font-semibold text-[#070b0a]">Try again</button>
     </main>
   </body></html>;
