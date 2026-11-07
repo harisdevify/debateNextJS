@@ -57,6 +57,8 @@ export function useDebateRoom(
   const [status, setStatus] = useState<DebateStatus>("starting");
   const [peerName, setPeerName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [peerCaption, setPeerCaption] = useState("");
+  const captionClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('checking');
@@ -75,6 +77,9 @@ export function useDebateRoom(
     }
   }, []);
   const closePeer = useCallback(() => {
+    if (captionClearRef.current) clearTimeout(captionClearRef.current);
+    captionClearRef.current = null;
+    setPeerCaption("");
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
     if (recoveryRef.current) clearTimeout(recoveryRef.current);
@@ -449,6 +454,16 @@ export function useDebateRoom(
       setStatus("peer-left");
       toast.info("Your partner left the debate.");
     });
+    socket.on('caption', ({ matchId, text }: { matchId: string; text: string }) => {
+      if (cancelled || !matchRef.current || matchRef.current !== matchId ||
+          typeof text !== 'string' || !text.trim()) return;
+      setPeerCaption(text.slice(0, 240));
+      if (captionClearRef.current) clearTimeout(captionClearRef.current);
+      captionClearRef.current = setTimeout(() => {
+        setPeerCaption('');
+        captionClearRef.current = null;
+      }, 7_000);
+    });
     socket.on(
       "chatMessage",
       ({ text, matchId }: { text: string; matchId: string }) => {
@@ -654,6 +669,15 @@ export function useDebateRoom(
     toast.success("User blocked.");
     return true;
   }, [emitWithAck, closePeer]);
+  const sendCaption = useCallback((text: string) => {
+    const socket = socketRef.current;
+    const matchId = matchRef.current;
+    const trimmed = text.trim();
+    if (!socket?.connected || !matchId || !trimmed) return;
+    // Keep captions within the server quota and never store them in chat history.
+    socket.emit("caption", { matchId, text: trimmed.slice(0, 240) });
+  }, []);
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -758,6 +782,8 @@ export function useDebateRoom(
     retrySearch: findNext,
     peerName,
     messages,
+    peerCaption,
+    sendCaption,
     sendMessage,
     findNext,
     reportPartner,

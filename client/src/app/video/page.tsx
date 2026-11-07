@@ -5,6 +5,7 @@ import { DebateSetup } from '@/components/debate/DebateSetup';
 import { PreDebateCheck } from '@/components/debate/PreDebateCheck';
 import { MatchSearchStatus } from '@/components/debate/MatchSearchStatus';
 import { MicrophoneActivity } from '@/components/debate/MicrophoneActivity';
+import { LiveCaptions } from '@/components/debate/LiveCaptions';
 import { DEFAULT_DEBATE_PREFERENCES, DEBATE_TOPICS, DEBATE_LANGUAGES, DEBATE_MODES } from '@/lib/debate-preferences';
 import type { DebatePreferences } from '@/types';
 import { BlockDialog } from '@/components/debate/BlockDialog';
@@ -90,6 +91,8 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
     retrySearch,
     peerName,
     messages: msgs,
+    peerCaption,
+    sendCaption,
     sendMessage,
     findNext,
     reportPartner,
@@ -205,6 +208,14 @@ function DebateRoom({ preferences, initialStream, onChangePreferences }: { prefe
                 <button onClick={onChangePreferences} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-background hover:bg-primary-hover">Start another debate</button>
               </div>
             )}
+            <LiveCaptions
+              status={status}
+              language={preferences.language}
+              micOn={micOn}
+              maySpeak={maySpeak}
+              peerCaption={peerCaption}
+              onCaption={sendCaption}
+            />
             {/* VIDEO GRID */}
             <div
               className="grid min-h-[min(58svh,460px)] min-w-0 flex-1 grid-cols-1 grid-rows-2 gap-3 sm:min-h-[420px] sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] sm:grid-rows-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]"
