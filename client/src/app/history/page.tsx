@@ -3,8 +3,9 @@
 import api from '@/lib/api';
 import { DEBATE_LANGUAGES, DEBATE_MODES, DEBATE_TOPICS } from '@/lib/debate-preferences';
 import { PageState } from '@/components/ui/PageState';
+import { AppModal } from '@/components/ui/AppModal';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, ArrowRight, CalendarDays, Clock3, History, ShieldCheck, Star, MessageSquareText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Clock3, History, ShieldCheck, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -41,18 +42,11 @@ function duration(seconds: number): string {
 
 function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback: { rating: number; comment: string | null }) => void }) {
   const [rating, setRating] = useState(0);
+  const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState('');
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  if (item.myFeedback) return (
-    <div className="flex items-center gap-1 text-xs text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
-      <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
-    </div>
-  );
-
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary hover:bg-primary/10">Rate debate</button>;
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -62,6 +56,7 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
     try {
       const response = await api.post<{ rating: number; comment: string | null }>(`/debates/${item.id}/feedback`, { rating, comment: comment.trim() || undefined }, { silent: true });
       onSaved({ rating: response.data.rating, comment: response.data.comment });
+      setOpen(false);
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
       setError(status === 409 ? 'You already rated this debate. Refresh history to see it.' : 'Could not save your rating. Please try again.');
@@ -70,20 +65,41 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
     }
   };
 
+  if (item.myFeedback) return (
+    <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
+      <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
+    </div>
+  );
+
   return (
-    <form onSubmit={(event) => void submit(event)} className="w-full max-w-lg space-y-3 rounded-xl border border-white/12 bg-[#0d1714] p-4" aria-label="Rate this debate">
-      <p className="text-sm font-semibold text-white">How was your debate partner?</p>
-      <div className="flex gap-1" role="group" aria-label="Rating from 1 to 5 stars">
-        {[1, 2, 3, 4, 5].map((value) => <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} star${value > 1 ? 's' : ''}`} aria-pressed={rating === value} className={`flex size-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-primary ${value <= rating ? 'text-primary' : 'text-white/35'} hover:text-primary`}><Star size={23} fill={value <= rating ? 'currentColor' : 'none'} aria-hidden="true" /></button>)}
-      </div>
-      <label htmlFor={`feedback-${item.id}`} className="block text-xs font-medium text-white/70">Optional private feedback</label>
-      <textarea id={`feedback-${item.id}`} value={comment} onChange={(event) => setComment(event.target.value)} maxLength={500} rows={3} placeholder="Share constructive feedback (optional)" className="w-full rounded-lg border border-white/20 bg-[#0b1512] px-3 py-2 text-sm text-white placeholder:text-white/35 focus-visible:outline-primary" />
-      {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
-      <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={!rating || submitting} className="min-h-11 rounded-lg bg-primary px-4 text-xs font-bold text-background disabled:opacity-40">{submitting ? 'Submitting…' : 'Submit rating'}</button>
-        <button type="button" disabled={submitting} onClick={() => { setOpen(false); setError(''); }} className="min-h-11 rounded-lg border border-white/20 px-4 text-xs text-white/70">Cancel</button>
-      </div>
-    </form>
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+        <Star size={14} /> Rate debate
+      </button>
+      <AppModal open={open} onClose={() => { if (!submitting) { setOpen(false); setError(''); } }} title="Rate your debate partner" description="Your feedback helps make conversations more respectful." closeDisabled={submitting}>
+        <form onSubmit={(event) => void submit(event)} className="space-y-4" aria-label="Rate this debate">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">Your rating</p>
+            <div className="flex items-center gap-1" role="group" aria-label="Rating from 1 to 5 stars" onMouseLeave={() => setHovered(0)}>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button key={value} type="button" aria-label={`${value} star${value > 1 ? 's' : ''}`} aria-pressed={rating === value} onMouseEnter={() => setHovered(value)} onFocus={() => setHovered(value)} onBlur={() => setHovered(0)} onClick={() => setRating(value)} className={`flex size-10 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary ${value <= (hovered || rating) ? 'text-amber-400' : 'text-white/30'}`}>
+                  <Star size={25} fill={value <= (hovered || rating) ? 'currentColor' : 'none'} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label htmlFor={`feedback-${item.id}`} className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/60">Private feedback <span className="font-normal normal-case">(optional)</span></label>
+            <textarea id={`feedback-${item.id}`} value={comment} onChange={(event) => setComment(event.target.value)} maxLength={500} rows={3} placeholder="Share constructive feedback…" className="w-full resize-y rounded-lg border border-white/15 bg-white/[0.035] px-3 py-2 text-sm text-white placeholder:text-white/35 focus-visible:border-primary" />
+          </div>
+          {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
+          <div className="flex justify-end gap-2 border-t border-white/10 pt-4">
+            <button type="button" disabled={submitting} onClick={() => { setOpen(false); setError(''); }} className="min-h-9 rounded-lg border border-white/20 px-4 text-sm text-white/75 hover:bg-white/5">Cancel</button>
+            <button type="submit" disabled={!rating || submitting} className="min-h-9 rounded-lg bg-primary px-4 text-sm font-semibold text-background hover:bg-primary-hover disabled:opacity-40">{submitting ? 'Submitting…' : 'Submit rating'}</button>
+          </div>
+        </form>
+      </AppModal>
+    </>
   );
 }
 
@@ -159,39 +175,28 @@ export default function DebateHistoryPage() {
             <span className="text-xs text-white/45">Page {data.page} of {data.totalPages}</span>
           </div>
 
-          <div className="mt-3 overflow-hidden rounded-2xl border border-white/12 bg-[#111b19]">
-            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] gap-4 border-b border-white/10 bg-white/[0.025] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40 md:grid">
-              <span>Conversation</span>
-              <span>Date & duration</span>
+          <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-[#101916]">
+            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(190px,0.6fr)_140px] gap-4 border-b border-white/10 bg-white/[0.025] px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-white/45 md:grid">
+              <span>Conversation</span><span>Date & duration</span><span className="text-right">Feedback</span>
             </div>
             <div className="divide-y divide-white/10">
               {data.items.map((item) => (
-                <article key={item.id} className="grid min-w-0 gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(160px,0.7fr)] md:items-start md:gap-4">
+                <article key={item.id} className="grid min-w-0 items-center gap-3 px-4 py-4 transition-colors hover:bg-white/[0.02] sm:px-5 md:grid-cols-[minmax(0,1fr)_minmax(190px,0.6fr)_140px] md:gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-sm font-semibold text-white">{topicName(item.topic)}</h2>
-                      <span className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${item.endReason === 'COMPLETED' ? 'border-primary/25 bg-primary/10 text-primary' : 'border-white/15 bg-white/5 text-white/55'}`}>
+                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${item.endReason === 'COMPLETED' ? 'border-primary/25 bg-primary/10 text-primary' : 'border-white/15 bg-white/5 text-white/55'}`}>
                         {item.endReason === 'COMPLETED' ? 'Completed' : 'Ended'}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-xs leading-5 text-white/50">{languageName(item.language)} · {modeName(item.mode)}</p>
+                    <p className="mt-1 text-xs text-white/50">{languageName(item.language)} · {modeName(item.mode)}</p>
                   </div>
-
-                  <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-xs text-white/60 md:flex-col md:gap-y-2">
-                    <span className="inline-flex items-center gap-2">
-                      <CalendarDays size={14} className="shrink-0 text-white/40" aria-hidden="true" />
-                      <time dateTime={item.endedAt}>{new Date(item.endedAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
-                    </span>
-                    <span className="inline-flex items-center gap-2"><Clock3 size={14} className="shrink-0 text-white/40" aria-hidden="true" />{duration(item.durationSeconds)}</span>
+                  <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-white/60 md:flex-col">
+                    <span className="inline-flex items-center gap-1.5"><CalendarDays size={14} className="shrink-0 text-white/40" aria-hidden="true" /><time dateTime={item.endedAt}>{new Date(item.endedAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></span>
+                    <span className="inline-flex items-center gap-1.5"><Clock3 size={14} className="shrink-0 text-white/40" aria-hidden="true" />{duration(item.durationSeconds)}</span>
                   </div>
-
-                  <div className="min-w-0 border-t border-white/10 pt-3 md:col-span-2">
-                    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-white/45"><MessageSquareText size={14} aria-hidden="true" /> Your feedback</span>
-                      <div className="min-w-0 flex-1 sm:flex sm:justify-end">
-                        <FeedbackForm item={item} onSaved={(feedback) => handleFeedbackSaved(item.id, feedback)} />
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-start md:justify-end">
+                    <FeedbackForm item={item} onSaved={(feedback) => handleFeedbackSaved(item.id, feedback)} />
                   </div>
                 </article>
               ))}
