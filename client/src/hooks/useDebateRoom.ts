@@ -65,6 +65,7 @@ export function useDebateRoom(
   const [peerScreenSharing, setPeerScreenSharing] = useState(false);
   const [screenShareBusy, setScreenShareBusy] = useState(false);
   const displayRef = useRef<MediaStream | null>(null);
+  const displaySenderRef = useRef<RTCRtpSender | null>(null);
   const displayBusyRef = useRef(false);
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('checking');
   const [connectionRoute, setConnectionRoute] = useState<ConnectionRoute>('checking');
@@ -92,6 +93,7 @@ export function useDebateRoom(
       });
     }
     displayBusyRef.current = false;
+    displaySenderRef.current = null;
     setScreenSharing(false);
     setScreenShareBusy(false);
     setPeerScreenSharing(false);
@@ -739,7 +741,8 @@ export function useDebateRoom(
     display.getTracks().forEach((item) => item.stop());
     setScreenSharing(false);
     const pc = peerRef.current;
-    const sender = pc?.getSenders?.().find((item) => item.track?.kind === 'video' && item.track === track);
+    const sender = displaySenderRef.current;
+    displaySenderRef.current = null;
     const camera = streamRef.current?.getVideoTracks()[0];
     try {
       if (sender && camera && camera.readyState === 'live') {
@@ -795,6 +798,7 @@ export function useDebateRoom(
         return false;
       }
       displayRef.current = captured;
+      displaySenderRef.current = sender;
       track.onended = () => { void stopScreenShare(); };
       setScreenSharing(true);
       socketRef.current?.emit('screen-share-state', { matchId: id, active: true });
