@@ -66,17 +66,17 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
     }
   };
 
-  if (item.myFeedback) return (
-    <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
-      <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
-    </div>
-  );
-
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
-        <Star size={14} /> Rate debate
-      </button>
+      {item.myFeedback ? (
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary" aria-label={`You rated this debate ${item.myFeedback.rating} out of 5 stars`}>
+          <Star size={14} fill="currentColor" aria-hidden="true" /> Rated {item.myFeedback.rating}/5
+        </div>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+          <Star size={14} /> Rate debate
+        </button>
+      )}
       <Dialog open={open} onClose={() => { if (!submitting) { setOpen(false); setError(''); } }} title="Rate your debate partner" description="Your feedback helps make conversations more respectful." closeDisabled={submitting}>
         <form onSubmit={(event) => void submit(event)} className="space-y-4" aria-label="Rate this debate">
           <div>
