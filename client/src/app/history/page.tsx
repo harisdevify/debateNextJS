@@ -3,7 +3,7 @@
 import api from '@/lib/api';
 import { DEBATE_LANGUAGES, DEBATE_MODES, DEBATE_TOPICS } from '@/lib/debate-preferences';
 import { PageState } from '@/components/ui/PageState';
-import { AppModal } from '@/components/ui/AppModal';
+import { Dialog } from '@/components/ui/Dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, ArrowRight, CalendarDays, Clock3, History, ShieldCheck, Star } from 'lucide-react';
 import Link from 'next/link';
@@ -76,7 +76,7 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
       <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/30 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
         <Star size={14} /> Rate debate
       </button>
-      <AppModal open={open} onClose={() => { if (!submitting) { setOpen(false); setError(''); } }} title="Rate your debate partner" description="Your feedback helps make conversations more respectful." closeDisabled={submitting}>
+      <Dialog open={open} onClose={() => { if (!submitting) { setOpen(false); setError(''); } }} title="Rate your debate partner" description="Your feedback helps make conversations more respectful." closeDisabled={submitting}>
         <form onSubmit={(event) => void submit(event)} className="space-y-4" aria-label="Rate this debate">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">Your rating</p>
@@ -98,7 +98,7 @@ function FeedbackForm({ item, onSaved }: { item: HistoryItem; onSaved: (feedback
             <button type="submit" disabled={!rating || submitting} className="min-h-9 rounded-lg bg-primary px-4 text-sm font-semibold text-background hover:bg-primary-hover disabled:opacity-40">{submitting ? 'Submitting…' : 'Submit rating'}</button>
           </div>
         </form>
-      </AppModal>
+      </Dialog>
     </>
   );
 }
